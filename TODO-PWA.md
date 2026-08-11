@@ -24,14 +24,18 @@ Estimated effort: 2–4 hours.
 
 ## Phase 2 — Offline support
 
-- [ ] Decide which screens and assets must remain available offline.
-- [ ] Add and register a service worker.
-- [ ] Cache the app shell and required static assets.
-- [ ] Add a clear offline fallback/error state.
-- [ ] Define a safe cache-versioning and update strategy.
-- [ ] Confirm locally stored progress remains usable offline.
-- [ ] Test first launch, repeat launch, offline launch, reconnection, and deployment updates.
-- [ ] Add appropriate service-worker security and cache-control headers.
+- [x] Keep all five app screens, modals, local data actions, icons, styles, and runtime-loaded assets available offline after one successful online launch.
+- [x] Add and register a root-scoped service worker.
+- [x] Cache the app shell and required static assets, with runtime caching for same-origin Next.js assets.
+- [x] Add a clear offline banner and a static first-launch fallback/error state.
+- [x] Define versioned caches, cleanup of old versions, and user-approved update activation.
+- [x] Preserve locally stored progress and existing JSON export/import behavior offline.
+- [ ] Test first launch, repeat launch, offline launch, reconnection, and deployment updates. *(Production/browser verification.)*
+- [x] Add service-worker security and cache-control headers.
+
+Implementation status: complete; browser and production-deployment verification remains.
+
+The service worker uses a network-first strategy for navigations, cache-first behavior for static assets, and a waiting-worker update prompt so an active session is not replaced unexpectedly. Increment `CACHE_VERSION` in `public/sw.js` for each deployed shell/cache contract change.
 
 Estimated effort: an additional 0.5–1.5 days.
 
