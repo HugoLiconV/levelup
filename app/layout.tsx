@@ -16,6 +16,11 @@ export const metadata: Metadata = {
   title: "LevelUp · Tu checkpoint de 92 días",
   description: "Un acompañante personal para construir hábitos antes de tu próximo checkpoint.",
   applicationName: "LevelUp",
+  appleWebApp: {
+    capable: true,
+    title: "LevelUp",
+    statusBarStyle: "default",
+  },
 };
 
 export const viewport: Viewport = {

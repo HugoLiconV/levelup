@@ -58,7 +58,7 @@ textarea { resize: vertical; }
 @keyframes loading { 0% { transform: translateX(-110%); } 100% { transform: translateX(260%); } }
 
 .app-shell { min-height: 100dvh; }
-.app-main { width: 100%; max-width: 590px; margin: 0 auto; padding: 26px 20px calc(108px + env(safe-area-inset-bottom)); }
+.app-main { width: 100%; max-width: 590px; margin: 0 auto; padding: calc(26px + env(safe-area-inset-top)) 20px calc(108px + env(safe-area-inset-bottom)); }
 .page-stack { display: flex; flex-direction: column; gap: 27px; }
 .page-stack > section { min-width: 0; }
 
@@ -402,6 +402,20 @@ textarea { resize: vertical; }
 .data-actions .danger-action > svg:first-child, .data-actions .danger-action strong { color: var(--danger); }
 .disclaimer { display: flex; gap: 6px; margin: -7px 2px 0; color: var(--ink-faint); font-size: 10px; line-height: 1.4; }
 .disclaimer svg { flex: 0 0 auto; margin-top: 1px; }
+
+.install-guide { display: flex; align-items: flex-start; gap: 13px; padding: 17px; border: 1px solid #cfe2d6; border-radius: 20px; background: linear-gradient(145deg, #edf7f0, #f8f5e9); box-shadow: var(--shadow); }
+.install-guide-icon { display: grid; flex: 0 0 auto; place-items: center; width: 42px; height: 42px; border-radius: 14px; color: #fff; background: var(--teal); box-shadow: 0 7px 16px rgba(52, 121, 111, .18); }
+.install-guide-copy { min-width: 0; }
+.install-guide h2 { margin: 3px 0 4px; font-size: 19px; line-height: 1.15; letter-spacing: -.04em; }
+.install-guide-copy > p:not(.eyebrow, .install-guide-note) { margin: 0; color: var(--ink-soft); font-size: 12px; }
+.install-guide ol { display: flex; flex-direction: column; gap: 8px; margin: 14px 0 0; padding: 0; list-style: none; }
+.install-guide li { display: flex; align-items: flex-start; gap: 9px; }
+.install-guide li > span { display: grid; flex: 0 0 auto; place-items: center; width: 22px; height: 22px; border-radius: 50%; color: var(--teal-dark); background: var(--mint); font-size: 10px; font-weight: 780; }
+.install-guide li > div { display: flex; flex-direction: column; min-width: 0; }
+.install-guide li strong { color: var(--ink); font-size: 12px; }
+.install-guide li small { color: var(--ink-faint); font-size: 10px; line-height: 1.35; }
+.install-guide-note { display: flex; gap: 6px; margin: 13px 0 0; padding-top: 11px; border-top: 1px solid rgba(52, 121, 111, .12); color: var(--ink-soft); font-size: 10px; line-height: 1.4; }
+.install-guide-note svg { flex: 0 0 auto; margin-top: 1px; color: var(--teal); }
 
 .bottom-nav { position: fixed; z-index: 20; right: 0; bottom: 0; left: 0; display: grid; grid-template-columns: repeat(5, 1fr); width: 100%; max-width: 590px; margin: 0 auto; padding: 8px 12px calc(8px + env(safe-area-inset-bottom)); border-top: 1px solid rgba(220, 226, 219, .9); background: rgba(255, 253, 249, .94); box-shadow: 0 -7px 25px rgba(34, 53, 49, .05); backdrop-filter: blur(16px); }
 .bottom-nav button { display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 3px; min-height: 52px; border: 0; border-radius: 13px; color: var(--ink-faint); background: transparent; font-size: 10px; font-weight: 650; }
