@@ -289,6 +289,13 @@ export default function Home() {
     }), "+3 XP · Una pausa corta también cuenta");
   };
 
+  const logWater = () => {
+    apply((previous) => ({
+      ...previous,
+      waterLogs: [...previous.waterLogs, { id: createId("water"), date: today, createdAt: new Date().toISOString() }],
+    }), `+${state.settings.questXp.water} XP · Botella registrada`);
+  };
+
   const logPartnerWalk = () => {
     if (todayData.partnerWalk) return;
     apply((previous) => ({ ...previous, partnerWalks: [...previous.partnerWalks, today] }), `Caminata juntos · +${state.settings.questXp.partnerWalk} XP`);
@@ -498,12 +505,13 @@ export default function Home() {
             onMove={logMovementBreak}
             onOmega={logOmega}
             onPartnerWalk={logPartnerWalk}
+            onWater={logWater}
             onOpenMeal={() => setModal({ type: "meal" })}
             onOpenExercise={() => setModal({ type: "exercise" })}
             onNavigate={setScreen}
           />
         )}
-        {screen === "food" && <FoodView state={state} today={today} todayData={todayData} onOpenMeal={() => setModal({ type: "meal" })} onRepeatMeal={repeatRecentMeal} onNutrition={() => setModal({ type: "nutrition" })} onDeleteMeal={deleteMeal} />}
+        {screen === "food" && <FoodView state={state} today={today} todayData={todayData} onOpenMeal={() => setModal({ type: "meal" })} onRepeatMeal={repeatRecentMeal} onNutrition={() => setModal({ type: "nutrition" })} onDeleteMeal={deleteMeal} onWater={logWater} />}
         {screen === "move" && (
           <MoveView
             state={state}
@@ -562,7 +570,7 @@ export default function Home() {
   );
 }
 
-function TodayView({ state, today, journeyStatus, journeyDay, todayData, weeklyStats, momentum, totalXp, onMove, onOmega, onPartnerWalk, onOpenMeal, onOpenExercise, onNavigate }: {
+function TodayView({ state, today, journeyStatus, journeyDay, todayData, weeklyStats, momentum, totalXp, onMove, onOmega, onPartnerWalk, onWater, onOpenMeal, onOpenExercise, onNavigate }: {
   state: AppState;
   today: string;
   journeyStatus: "upcoming" | "active" | "completed";
@@ -574,6 +582,7 @@ function TodayView({ state, today, journeyStatus, journeyDay, todayData, weeklyS
   onMove: () => void;
   onOmega: () => void;
   onPartnerWalk: () => void;
+  onWater: () => void;
   onOpenMeal: () => void;
   onOpenExercise: () => void;
   onNavigate: (screen: Screen) => void;
@@ -584,6 +593,8 @@ function TodayView({ state, today, journeyStatus, journeyDay, todayData, weeklyS
   const exerciseComplete = todayData.exercises.length > 0;
   const mealsComplete = todayData.mainMeals.length >= 3;
   const vegetablesComplete = todayData.vegetableMeals.length >= 2;
+  const waterComplete = todayData.waterMl >= state.settings.dailyWaterGoalMl;
+  const waterBottleGoal = Math.max(1, Math.ceil(state.settings.dailyWaterGoalMl / state.settings.bottleSizeMl));
   const partnerComplete = todayData.partnerWalk;
   const scheduledExercise = isExerciseDay(today, state.settings);
   const daysUntil = getDaysUntilAppointment(today, state.settings.appointmentDate);
@@ -621,13 +632,14 @@ function TodayView({ state, today, journeyStatus, journeyDay, todayData, weeklyS
       </section>
 
       <section>
-        <div className="section-heading"><div><p className="eyebrow">PARA HOY</p><h2>Tus quests</h2></div><span className="quiet-count">{[omegaComplete, movementComplete, mealsComplete, vegetablesComplete, ...(scheduledExercise ? [exerciseComplete] : [])].filter(Boolean).length} / {scheduledExercise ? 5 : 4}</span></div>
+        <div className="section-heading"><div><p className="eyebrow">PARA HOY</p><h2>Tus quests</h2></div><span className="quiet-count">{[omegaComplete, movementComplete, mealsComplete, vegetablesComplete, waterComplete, ...(scheduledExercise ? [exerciseComplete] : [])].filter(Boolean).length} / {scheduledExercise ? 6 : 5}</span></div>
         <div className="quest-list">
           <QuestRow icon="sun" title={state.settings.supplementName} description={state.settings.supplementDose} reward={state.settings.questXp.omega} completed={omegaComplete} onClick={onOmega} />
           <QuestRow icon="footprints" title="Pausas de movimiento" description={`Aléjate de la pantalla ${state.settings.dailyMovementGoal} veces`} progress={`${todayData.movementBreaks.length} / ${state.settings.dailyMovementGoal}`} reward={state.settings.questXp.movement} completed={movementComplete} onClick={onMove} />
           {scheduledExercise && <QuestRow icon="dumbbell" title="Actividad" description="30 min de movimiento, a tu ritmo" reward={state.settings.questXp.exercise} completed={exerciseComplete} onClick={onOpenExercise} />}
           <QuestRow icon="utensils" title="Comer con intención" description="Registra tus comidas principales" progress={`${Math.min(todayData.mainMeals.length, 3)} / 3`} reward={state.settings.questXp.meals} completed={mealsComplete} onClick={onOpenMeal} />
           <QuestRow icon="leaf" title="Verduras" description="Inclúyelas en 2 comidas" progress={`${Math.min(todayData.vegetableMeals.length, 2)} / 2`} reward={state.settings.questXp.vegetables} completed={vegetablesComplete} onClick={() => onNavigate("food")} />
+          <QuestRow icon="droplet" title="Agua" description={`Toma agua durante el día (${state.settings.bottleSizeMl} mL por botella)`} progress={`${Math.min(todayData.waterLogs.length, waterBottleGoal)} / ${waterBottleGoal}`} reward={state.settings.questXp.water} completed={waterComplete} onClick={onWater} />
         </div>
       </section>
 
@@ -669,15 +681,27 @@ function DotProgress({ value, max, color = "mint" }: { value: number; max: numbe
   return <div className="dot-progress" aria-label={`${value} de ${max}`}><span>{Array.from({ length: max }, (_, index) => <i key={index} className={classNames(index < value && "filled", color)} />)}</span><b>{Math.min(value, max)} / {max}</b></div>;
 }
 
-function FoodView({ state, today, todayData, onOpenMeal, onRepeatMeal, onNutrition, onDeleteMeal }: { state: AppState; today: string; todayData: ReturnType<typeof getDayData>; onOpenMeal: () => void; onRepeatMeal: () => void; onNutrition: () => void; onDeleteMeal: (mealId: string) => void }) {
+function FoodView({ state, today, todayData, onOpenMeal, onRepeatMeal, onNutrition, onDeleteMeal, onWater }: { state: AppState; today: string; todayData: ReturnType<typeof getDayData>; onOpenMeal: () => void; onRepeatMeal: () => void; onNutrition: () => void; onDeleteMeal: (mealId: string) => void; onWater: () => void }) {
   const [tab, setTab] = useState<"registro" | "guia">("registro");
   const recentMeal = [...state.meals].sort((a, b) => b.createdAt.localeCompare(a.createdAt))[0];
+  const waterComplete = todayData.waterMl >= state.settings.dailyWaterGoalMl;
+  const waterBottleGoal = Math.max(1, Math.ceil(state.settings.dailyWaterGoalMl / state.settings.bottleSizeMl));
   return <div className="page-stack">
     <PageHeader eyebrow="COMIDA" title="Comer con intención" subtitle="Registra lo suficiente para notar tus patrones." />
     <div className="segmented-control"><button className={classNames(tab === "registro" && "selected")} onClick={() => setTab("registro")}>Registro</button><button className={classNames(tab === "guia" && "selected")} onClick={() => setTab("guia")}>Guía de comida</button></div>
     {tab === "registro" ? <>
       <section className="food-today-head"><div><p className="eyebrow">HOY · {formatShortDate(today)}</p><h2>{todayData.mainMeals.length} comidas registradas</h2></div><div className="meal-score"><span>{todayData.vegetableMeals.length}</span><small>con verduras</small></div></section>
       {recentMeal && <button className="repeat-meal" onClick={onRepeatMeal}><span className="repeat-icon"><Icon name="refresh" size={17} /></span><span><strong>Repetir comida reciente</strong><small>{recentMeal.description}</small></span><Icon name="arrow" size={16} /></button>}
+
+      <section className={classNames("focus-card", waterComplete && "is-complete")}>
+        <div className="focus-icon"><Icon name="droplet" size={23} /></div>
+        <div className="focus-copy">
+          <h2>Agua</h2>
+          <p>{waterComplete ? "Meta de agua completa." : `${todayData.waterMl} / ${state.settings.dailyWaterGoalMl} mL · ${todayData.waterLogs.length} / ${waterBottleGoal} botellas`}</p>
+          <DotProgress value={todayData.waterLogs.length} max={waterBottleGoal} color="mint" />
+        </div>
+        <button className={classNames("round-action", waterComplete && "round-action-complete")} onClick={onWater} aria-label="Registrar una botella de agua"><Icon name="plus" size={21} /></button>
+      </section>
       <div className="meal-list">{todayData.meals.length === 0 ? <EmptyState icon="utensils" title="Tu registro empieza aquí" description="Una frase sencilla es suficiente. No necesitas contar calorías." actionLabel="Registrar comida" onAction={onOpenMeal} /> : todayData.meals.map((meal) => <MealRow key={meal.id} meal={meal} onDelete={onDeleteMeal} />)}</div>
       <button className="primary-button full-button" onClick={onOpenMeal}><Icon name="plus" size={18} /> Registrar comida</button>
       <section className="guide-teaser"><div className="guide-teaser-icon"><Icon name="leaf" size={20} /></div><div><p className="eyebrow">GUÍA GENERAL</p><h3>Ideas simples, sin reglas rígidas</h3><p>Mientras llega tu cita con el nutriólogo, usa esto como orientación general.</p></div><button className="icon-button soft-icon" onClick={() => setTab("guia")} aria-label="Abrir guía"><Icon name="arrow" size={17} /></button></section>
@@ -766,9 +790,9 @@ function MoreView({ state, onSettingsChange, onToggleReminders, onReminderTimeCh
   return <div className="page-stack"><PageHeader eyebrow="MÁS" title="Tu plan" subtitle="Ajustes simples para que LevelUp siga siendo tuyo." />
     <InstallGuide />
     <section><div className="section-heading"><div><p className="eyebrow">IF → THEN</p><h2>Mi plan</h2></div></div><div className="intentions-list">{state.intentions.map((intention) => <button className="intention-row" key={intention.id} onClick={() => onEditIntention(intention)}><span className="intention-if">SI <strong>{intention.ifText}</strong></span><Icon name="arrow" size={15} /><span className="intention-then">ENTONCES <strong>{intention.thenText}</strong></span><Icon name="edit" size={14} /></button>)}</div></section>
-    <section><div className="section-heading"><div><p className="eyebrow">AJUSTES DEL RETO</p><h2>Lo que te funciona</h2></div></div><div className="settings-list"><label className="setting-row"><span><strong>Fecha de la cita</strong><small>{formatLongDate(state.settings.appointmentDate)}</small></span><input type="date" value={state.settings.appointmentDate} onChange={(event) => onSettingsChange({ appointmentDate: event.target.value })} /></label><label className="setting-row"><span><strong>Ventana de laboratorios</strong><small>Edita la fecha cuando la tengas clara</small></span><input type="date" value={state.settings.labWindowDate} onChange={(event) => onSettingsChange({ labWindowDate: event.target.value })} /></label><label className="setting-row"><span><strong>Meta de actividad semanal</strong><small>Minutos que cuentan para tu semana</small></span><span className="inline-input"><input type="number" min="10" step="5" value={state.settings.weeklyActivityGoal} onChange={(event) => onSettingsChange({ weeklyActivityGoal: Number(event.target.value) || 0 })} /><em>min</em></span></label><label className="setting-row"><span><strong>Sesiones de fuerza</strong><small>Objetivo semanal</small></span><span className="inline-input"><input type="number" min="0" max="7" value={state.settings.strengthGoal} onChange={(event) => onSettingsChange({ strengthGoal: Number(event.target.value) || 0 })} /><em>/ semana</em></span></label><label className="setting-row"><span><strong>Pausas de movimiento</strong><small>Por día de trabajo</small></span><span className="inline-input"><input type="number" min="1" max="12" value={state.settings.dailyMovementGoal} onChange={(event) => onSettingsChange({ dailyMovementGoal: Number(event.target.value) || 1 })} /><em>/ día</em></span></label><label className="setting-row"><span><strong>{state.settings.supplementName}</strong><small>Texto de tu hábito</small></span><input className="setting-text-input" type="text" value={state.settings.supplementDose} onChange={(event) => onSettingsChange({ supplementDose: event.target.value })} /></label><div className="setting-row reminder-setting"><span><strong>Recordatorios</strong><small>{notificationSupported ? "Omega-3 y pausas aunque cierres la app" : "Este navegador no permite notificaciones push"}</small></span><button className={classNames("toggle", state.settings.reminderEnabled && "on")} disabled={notificationBusy || !notificationSupported} onClick={() => onToggleReminders(!state.settings.reminderEnabled)} aria-pressed={state.settings.reminderEnabled}><span /></button></div>{state.settings.reminderEnabled && <label className="reminder-time"><span>Hora de omega-3</span><input type="time" value={state.settings.reminderTime} onChange={(event) => onReminderTimeChange(event.target.value)} /></label>}<div className="notification-status"><span>{notificationPermission === "granted" ? "Notificaciones permitidas" : notificationPermission === "denied" ? "Notificaciones bloqueadas por el navegador" : notificationPermission === "unsupported" ? "Notificaciones no disponibles" : "Notificaciones aún no activadas"}</span>{state.settings.reminderEnabled && <button className="text-button" disabled={notificationBusy} onClick={onUnsubscribeNotifications}>Desvincular dispositivo</button>}</div></div></section>
+    <section><div className="section-heading"><div><p className="eyebrow">AJUSTES DEL RETO</p><h2>Lo que te funciona</h2></div></div><div className="settings-list"><label className="setting-row"><span><strong>Fecha de la cita</strong><small>{formatLongDate(state.settings.appointmentDate)}</small></span><input type="date" value={state.settings.appointmentDate} onChange={(event) => onSettingsChange({ appointmentDate: event.target.value })} /></label><label className="setting-row"><span><strong>Ventana de laboratorios</strong><small>Edita la fecha cuando la tengas clara</small></span><input type="date" value={state.settings.labWindowDate} onChange={(event) => onSettingsChange({ labWindowDate: event.target.value })} /></label><label className="setting-row"><span><strong>Meta de actividad semanal</strong><small>Minutos que cuentan para tu semana</small></span><span className="inline-input"><input type="number" min="10" step="5" value={state.settings.weeklyActivityGoal} onChange={(event) => onSettingsChange({ weeklyActivityGoal: Number(event.target.value) || 0 })} /><em>min</em></span></label><label className="setting-row"><span><strong>Sesiones de fuerza</strong><small>Objetivo semanal</small></span><span className="inline-input"><input type="number" min="0" max="7" value={state.settings.strengthGoal} onChange={(event) => onSettingsChange({ strengthGoal: Number(event.target.value) || 0 })} /><em>/ semana</em></span></label><label className="setting-row"><span><strong>Pausas de movimiento</strong><small>Por día de trabajo</small></span><span className="inline-input"><input type="number" min="1" max="12" value={state.settings.dailyMovementGoal} onChange={(event) => onSettingsChange({ dailyMovementGoal: Number(event.target.value) || 1 })} /><em>/ día</em></span></label><label className="setting-row"><span><strong>Tamaño de mi botella</strong><small>Cuánto tomas por recarga</small></span><span className="inline-input"><input type="number" min="50" step="50" value={state.settings.bottleSizeMl} onChange={(event) => onSettingsChange({ bottleSizeMl: Number(event.target.value) || 1 })} /><em>mL</em></span></label><label className="setting-row"><span><strong>Meta diaria de agua</strong><small>Total que quieres tomar al día</small></span><span className="inline-input"><input type="number" min="250" step="250" value={state.settings.dailyWaterGoalMl} onChange={(event) => onSettingsChange({ dailyWaterGoalMl: Number(event.target.value) || 250 })} /><em>mL</em></span></label><label className="setting-row"><span><strong>{state.settings.supplementName}</strong><small>Texto de tu hábito</small></span><input className="setting-text-input" type="text" value={state.settings.supplementDose} onChange={(event) => onSettingsChange({ supplementDose: event.target.value })} /></label><div className="setting-row reminder-setting"><span><strong>Recordatorios</strong><small>{notificationSupported ? "Omega-3 y pausas aunque cierres la app" : "Este navegador no permite notificaciones push"}</small></span><button className={classNames("toggle", state.settings.reminderEnabled && "on")} disabled={notificationBusy || !notificationSupported} onClick={() => onToggleReminders(!state.settings.reminderEnabled)} aria-pressed={state.settings.reminderEnabled}><span /></button></div>{state.settings.reminderEnabled && <label className="reminder-time"><span>Hora de omega-3</span><input type="time" value={state.settings.reminderTime} onChange={(event) => onReminderTimeChange(event.target.value)} /></label>}<div className="notification-status"><span>{notificationPermission === "granted" ? "Notificaciones permitidas" : notificationPermission === "denied" ? "Notificaciones bloqueadas por el navegador" : notificationPermission === "unsupported" ? "Notificaciones no disponibles" : "Notificaciones aún no activadas"}</span>{state.settings.reminderEnabled && <button className="text-button" disabled={notificationBusy} onClick={onUnsubscribeNotifications}>Desvincular dispositivo</button>}</div></div></section>
     <section className="nutrition-setting"><div className="setting-icon"><Icon name="leaf" size={18} /></div><div><p className="eyebrow">NUTRIÓLOGO</p><h3>{state.nutritionPlan.status === "pending" ? "Plan pendiente" : "Plan personal guardado"}</h3><p>{state.nutritionPlan.status === "pending" ? "Agrega recomendaciones cuando tengas tu cita." : "Tus recomendaciones están listas para consultar."}</p></div><button className="text-button" onClick={onOpenNutrition}>{state.nutritionPlan.status === "pending" ? "Agregar" : "Editar"}</button></section>
-    <section><div className="section-heading"><div><p className="eyebrow">RECOMPENSAS</p><h2>XP por quest</h2></div></div><div className="settings-list xp-settings-list">{([{ id: "omega", label: "Omega-3" }, { id: "movement", label: "Pausas de movimiento" }, { id: "exercise", label: "Actividad" }, { id: "meals", label: "Comidas del día" }, { id: "vegetables", label: "Verduras" }, { id: "fruit", label: "Fruta" }, { id: "partnerWalk", label: "Caminata juntos" }] as Array<{ id: QuestId; label: string }>).map((quest) => <label className="setting-row" key={quest.id}><span><strong>{quest.label}</strong><small>Máximo de la quest</small></span><span className="inline-input"><input type="number" min="0" max="100" value={state.settings.questXp[quest.id]} onChange={(event) => onSettingsChange({ questXp: { ...state.settings.questXp, [quest.id]: Number(event.target.value) || 0 } })} /><em>XP</em></span></label>)}</div></section>
+    <section><div className="section-heading"><div><p className="eyebrow">RECOMPENSAS</p><h2>XP por quest</h2></div></div><div className="settings-list xp-settings-list">{([{ id: "omega", label: "Omega-3" }, { id: "movement", label: "Pausas de movimiento" }, { id: "exercise", label: "Actividad" }, { id: "meals", label: "Comidas del día" }, { id: "vegetables", label: "Verduras" }, { id: "fruit", label: "Fruta" }, { id: "water", label: "Agua" }, { id: "partnerWalk", label: "Caminata juntos" }] as Array<{ id: QuestId; label: string }>).map((quest) => <label className="setting-row" key={quest.id}><span><strong>{quest.label}</strong><small>Máximo de la quest</small></span><span className="inline-input"><input type="number" min="0" max="100" value={state.settings.questXp[quest.id]} onChange={(event) => onSettingsChange({ questXp: { ...state.settings.questXp, [quest.id]: Number(event.target.value) || 0 } })} /><em>XP</em></span></label>)}</div></section>
     <section><div className="section-heading"><div><p className="eyebrow">TUS DATOS</p><h2>Local y bajo tu control</h2></div></div><div className="data-actions"><button onClick={onExport}><Icon name="download" size={17} /><span><strong>Exportar datos</strong><small>Guardar un respaldo JSON</small></span><Icon name="arrow" size={15} /></button><button onClick={onImport}><Icon name="upload" size={17} /><span><strong>Importar datos</strong><small>Restaurar un respaldo JSON</small></span><Icon name="arrow" size={15} /></button><button className="danger-action" onClick={onReset}><Icon name="trash" size={17} /><span><strong>Restablecer app</strong><small>Borrar el progreso de este dispositivo</small></span><Icon name="arrow" size={15} /></button></div></section>
     <p className="disclaimer"><Icon name="info" size={14} />Checkpoint te ayuda a registrar hábitos y progreso. No sustituye las recomendaciones de tu médico o nutriólogo.</p>
   </div>;

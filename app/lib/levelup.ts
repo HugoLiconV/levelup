@@ -29,7 +29,8 @@ export type QuestId =
   | "meals"
   | "vegetables"
   | "fruit"
-  | "partnerWalk";
+  | "partnerWalk"
+  | "water";
 
 export type LabMetric =
   | "triglycerides"
@@ -56,6 +57,8 @@ export interface AppSettings {
   reminderTime: string;
   solidDayThreshold: number;
   questXp: Record<QuestId, number>;
+  bottleSizeMl: number;
+  dailyWaterGoalMl: number;
 }
 
 export interface DailyQuest {
@@ -93,6 +96,12 @@ export interface ExerciseSession {
 }
 
 export interface MovementBreak {
+  id: string;
+  date: string;
+  createdAt: string;
+}
+
+export interface WaterLog {
   id: string;
   date: string;
   createdAt: string;
@@ -157,6 +166,7 @@ export interface AppState {
   meals: Meal[];
   exercises: ExerciseSession[];
   movementBreaks: MovementBreak[];
+  waterLogs: WaterLog[];
   supplementLogs: SupplementLog[];
   questCompletions: QuestCompletion[];
   partnerWalks: string[];
@@ -334,12 +344,14 @@ export function getDayData(state: AppState, date: string) {
   const meals = state.meals.filter((meal) => meal.date === date);
   const exercises = state.exercises.filter((exercise) => exercise.date === date);
   const movementBreaks = state.movementBreaks.filter((movement) => movement.date === date);
+  const waterLogs = state.waterLogs.filter((water) => water.date === date);
+  const waterMl = waterLogs.length * state.settings.bottleSizeMl;
   const supplementTaken = state.supplementLogs.some((log) => log.date === date);
   const mainMeals = meals.filter((meal) => isMainMeal(meal.type));
   const vegetableMeals = meals.filter((meal) => meal.tags.includes("Verduras"));
   const fruitMeals = meals.filter((meal) => meal.tags.includes("Fruta"));
   const partnerWalk = state.partnerWalks.includes(date);
-  return { meals, exercises, movementBreaks, supplementTaken, mainMeals, vegetableMeals, fruitMeals, partnerWalk };
+  return { meals, exercises, movementBreaks, waterLogs, waterMl, supplementTaken, mainMeals, vegetableMeals, fruitMeals, partnerWalk };
 }
 
 export function getDayScore(state: AppState, date: string): number {
@@ -362,6 +374,7 @@ export function getDailyXp(state: AppState, date: string): number {
   let total = 0;
   if (data.supplementTaken) total += xp.omega;
   total += Math.min(data.movementBreaks.length * 3, xp.movement);
+  total += Math.min(data.waterLogs.length * 3, xp.water);
   if (data.exercises.length > 0) total += xp.exercise;
   total += Math.min(data.mainMeals.length * 5, xp.meals);
   if (data.vegetableMeals.length >= 2) total += xp.vegetables;
@@ -375,6 +388,7 @@ export function getTotalXp(state: AppState): number {
     ...state.meals.map((item) => item.date),
     ...state.exercises.map((item) => item.date),
     ...state.movementBreaks.map((item) => item.date),
+    ...state.waterLogs.map((item) => item.date),
     ...state.supplementLogs.map((item) => item.date),
     ...state.partnerWalks,
   ]);
@@ -515,11 +529,14 @@ export function createSeedState(): AppState {
       reminderEnabled: false,
       reminderTime: "09:00",
       solidDayThreshold: 0.65,
-      questXp: { omega: 10, movement: 18, exercise: 25, meals: 15, vegetables: 10, fruit: 5, partnerWalk: 10 },
+      questXp: { omega: 10, movement: 18, exercise: 25, meals: 15, vegetables: 10, fruit: 5, partnerWalk: 10, water: 12 },
+      bottleSizeMl: 600,
+      dailyWaterGoalMl: 2000,
     },
     meals: [],
     exercises: [],
     movementBreaks: [],
+    waterLogs: [],
     supplementLogs: [],
     questCompletions: [],
     partnerWalks: [],
