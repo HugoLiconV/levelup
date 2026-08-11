@@ -71,6 +71,7 @@ textarea { resize: vertical; }
 .page-stack > section { min-width: 0; }
 
 .app-header { min-height: 33px; display: flex; justify-content: space-between; align-items: center; }
+.app-header .icon-button { flex: 0 0 44px; border: 1px solid rgba(52, 121, 111, .08); background: rgba(255, 255, 255, .58); box-shadow: 0 3px 10px rgba(40, 62, 57, .04); }
 .brand-lockup { display: inline-flex; align-items: center; gap: 8px; color: var(--teal-dark); font-size: 18px; font-weight: 750; letter-spacing: -0.04em; }
 .brand-mark { display: inline-grid; place-items: center; width: 26px; height: 26px; border-radius: 9px; color: #fff; background: var(--teal); box-shadow: 0 4px 10px rgba(52, 121, 111, 0.2); }
 .icon-button { width: 44px; height: 44px; display: inline-grid; place-items: center; border: 0; border-radius: 14px; background: transparent; color: var(--ink-soft); transition: background .18s ease, color .18s ease, transform .18s ease; }
@@ -183,9 +184,9 @@ textarea { resize: vertical; }
 .segmented-control button.selected { color: var(--ink); background: var(--surface); box-shadow: 0 3px 9px rgba(39, 64, 58, .07); }
 .food-today-head { display: flex; justify-content: space-between; align-items: center; }
 .food-today-head h2 { margin: 4px 0 0; font-size: 21px; letter-spacing: -.045em; }
-.meal-score { display: flex; flex-direction: column; align-items: center; justify-content: center; width: 61px; height: 61px; border: 1px solid #d5e8dc; border-radius: 18px; color: var(--teal-dark); background: var(--mint); }
+.meal-score { display: flex; flex-direction: column; align-items: center; justify-content: center; min-width: 61px; min-height: 61px; padding: 8px 10px; border: 1px solid #d5e8dc; border-radius: 18px; color: var(--teal-dark); background: var(--mint); }
 .meal-score span { font-size: 22px; font-weight: 750; line-height: 1; }
-.meal-score small { margin-top: 3px; color: var(--teal); font-size: 9px; font-weight: 700; }
+.meal-score small { margin-top: 3px; color: var(--teal); font-size: 9px; font-weight: 700; white-space: nowrap; }
 .repeat-meal { display: flex; align-items: center; gap: 10px; width: 100%; padding: 12px; border: 1px solid #e2e8e1; border-radius: 15px; text-align: left; background: #f6faf6; }
 .repeat-meal:hover { border-color: #bdd8c8; }
 .repeat-icon { display: grid; place-items: center; width: 34px; height: 34px; border-radius: 11px; color: var(--teal); background: #e2f0e5; }
@@ -194,6 +195,7 @@ textarea { resize: vertical; }
 .repeat-meal small { overflow: hidden; color: var(--ink-soft); font-size: 11px; text-overflow: ellipsis; white-space: nowrap; }
 .repeat-meal > svg { color: var(--teal); }
 .meal-list { display: flex; flex-direction: column; gap: 9px; }
+.empty-state .secondary-button { margin-top: 12px; }
 .meal-row { display: flex; align-items: flex-start; gap: 11px; padding: 13px; border: 1px solid var(--line); border-radius: 16px; background: var(--surface); }
 .meal-type-icon { flex: 0 0 auto; display: grid; place-items: center; width: 35px; height: 35px; border-radius: 11px; color: var(--teal); background: var(--mint); }
 .meal-row-content { min-width: 0; flex: 1; }
@@ -212,6 +214,7 @@ textarea { resize: vertical; }
 .secondary-button { border: 1px solid var(--line-strong); color: var(--teal-dark); background: var(--surface); }
 .secondary-button:hover { border-color: var(--teal); background: #f5faf6; }
 .full-button { width: 100%; }
+.meal-list + .full-button { margin-top: 9px; }
 .guide-teaser { display: flex; align-items: center; gap: 11px; padding: 15px; border: 1px solid #e6e2d3; border-radius: 18px; background: #fcf9ef; }
 .guide-teaser-icon { display: grid; flex: 0 0 auto; place-items: center; width: 38px; height: 38px; border-radius: 13px; color: var(--gold); background: var(--gold-soft); }
 .guide-teaser > div:nth-child(2) { flex: 1; min-width: 0; }
@@ -221,6 +224,7 @@ textarea { resize: vertical; }
 .general-note { display: flex; gap: 10px; padding: 13px; border: 1px solid #e2e8e1; border-radius: 16px; color: var(--teal-dark); background: #eef6f0; }
 .general-note svg { flex: 0 0 auto; margin-top: 1px; }
 .general-note p { margin: 0; color: var(--ink-soft); font-size: 12px; }
+.food-guide { display: flex; flex-direction: column; gap: 13px; }
 .guide-columns { display: flex; flex-direction: column; gap: 13px; }
 .guide-block { padding: 17px; border-radius: 19px; }
 .prioritize { border: 1px solid #dce9dc; background: #eff8ef; }
