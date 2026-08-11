@@ -1,0 +1,27 @@
+/* Keep the app content in its own scroll container so the bottom navigation
+   remains anchored to the viewport, including in iOS standalone/PWA mode. */
+html,
+body {
+  height: 100%;
+}
+
+body {
+  overflow: hidden;
+}
+
+.app-shell {
+  height: 100dvh;
+  overflow: hidden;
+}
+
+.app-main {
+  height: 100%;
+  overflow-y: auto;
+  overscroll-behavior-y: contain;
+  -webkit-overflow-scrolling: touch;
+}
+
+.bottom-nav {
+  position: fixed;
+  inset: auto 0 0;
+}
