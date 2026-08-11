@@ -777,8 +777,25 @@ function BottomNav({ screen, onNavigate }: { screen: Screen; onNavigate: (screen
 }
 
 function Modal({ title, eyebrow, children, onClose }: { title: string; eyebrow?: string; children: ReactNode; onClose: () => void }) {
+  const [viewportHeight, setViewportHeight] = useState<number | null>(null);
+
   useEffect(() => { const handler = (event: KeyboardEvent) => { if (event.key === "Escape") onClose(); }; window.addEventListener("keydown", handler); return () => window.removeEventListener("keydown", handler); }, [onClose]);
-  return <div className="modal-backdrop" role="presentation" onMouseDown={(event) => { if (event.target === event.currentTarget) onClose(); }}><div className="modal-panel" role="dialog" aria-modal="true" aria-label={title}><div className="modal-header"><div>{eyebrow && <p className="eyebrow">{eyebrow}</p>}<h2>{title}</h2></div><button className="icon-button" onClick={onClose} aria-label="Cerrar"><Icon name="close" size={19} /></button></div>{children}</div></div>;
+  useEffect(() => {
+    const viewport = window.visualViewport;
+    if (!viewport) return;
+    const updateViewportHeight = () => setViewportHeight(Math.round(viewport.height));
+    updateViewportHeight();
+    viewport.addEventListener("resize", updateViewportHeight);
+    viewport.addEventListener("scroll", updateViewportHeight);
+    return () => {
+      viewport.removeEventListener("resize", updateViewportHeight);
+      viewport.removeEventListener("scroll", updateViewportHeight);
+    };
+  }, []);
+
+  const backdropStyle = viewportHeight ? { height: `${viewportHeight}px` } : undefined;
+  const panelStyle = viewportHeight ? { maxHeight: `${Math.max(0, viewportHeight - 28)}px` } : undefined;
+  return <div className="modal-backdrop" style={backdropStyle} role="presentation" onMouseDown={(event) => { if (event.target === event.currentTarget) onClose(); }}><div className="modal-panel" style={panelStyle} role="dialog" aria-modal="true" aria-label={title}><div className="modal-header"><div>{eyebrow && <p className="eyebrow">{eyebrow}</p>}<h2>{title}</h2></div><button className="icon-button" onClick={onClose} aria-label="Cerrar"><Icon name="close" size={19} /></button></div>{children}</div></div>;
 }
 
 function MealModal({ meal, onClose, onSave }: { meal?: Meal; onClose: () => void; onSave: (meal: Omit<Meal, "id" | "date" | "createdAt">) => void }) {
