@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useRef, useState, type FormEvent, type ReactNode } from "react";
+import { useEffect, useLayoutEffect, useMemo, useRef, useState, type FormEvent, type ReactNode } from "react";
 import { Icon, type IconName } from "./components/Icons";
 import { InstallGuide } from "./components/InstallGuide";
 import {
@@ -129,6 +129,7 @@ export default function Home() {
   const [notificationPermission, setNotificationPermission] = useState<NotificationPermissionState>("default");
   const [notificationSupported, setNotificationSupported] = useState(false);
   const [notificationBusy, setNotificationBusy] = useState(false);
+  const appMainRef = useRef<HTMLElement>(null);
   const importRef = useRef<HTMLInputElement>(null);
   const previousLevelRef = useRef<number | null>(null);
 
@@ -140,6 +141,12 @@ export default function Home() {
   const momentum = useMemo(() => getMomentum(state, today), [state, today]);
   const totalXp = useMemo(() => getTotalXp(state), [state]);
   const level = useMemo(() => getLevel(totalXp), [totalXp]);
+
+  useLayoutEffect(() => {
+    if (!appMainRef.current) return;
+    appMainRef.current.scrollTop = 0;
+    appMainRef.current.scrollLeft = 0;
+  }, [screen]);
 
   useEffect(() => {
     const frame = window.requestAnimationFrame(() => setScreen(getRequestedScreen()));
@@ -477,7 +484,7 @@ export default function Home() {
 
   return (
     <div className="app-shell">
-      <main className="app-main">
+      <main ref={appMainRef} className="app-main">
         {screen === "today" && (
           <TodayView
             state={state}
@@ -618,7 +625,7 @@ function TodayView({ state, today, journeyStatus, journeyDay, todayData, weeklyS
         <div className="quest-list">
           <QuestRow icon="sun" title={state.settings.supplementName} description={state.settings.supplementDose} reward={state.settings.questXp.omega} completed={omegaComplete} onClick={onOmega} />
           <QuestRow icon="footprints" title="Pausas de movimiento" description={`Aléjate de la pantalla ${state.settings.dailyMovementGoal} veces`} progress={`${todayData.movementBreaks.length} / ${state.settings.dailyMovementGoal}`} reward={state.settings.questXp.movement} completed={movementComplete} onClick={onMove} />
-          {scheduledExercise && <QuestRow icon="dumbbell" title="Actividad" description="30 min de movimiento, a tu ritmo" reward={state.settings.questXp.exercise} completed={exerciseComplete} onClick={onOpenExercise} />}
+          {scheduledExercise && <QuestRow icon="dumbbell" title="Actividad" description="30 min de movimiento, a tu ritmo" reward={state.settings.questXp.exercise} completed={exerciseComplete} onClick={onOpenExercise} />
           <QuestRow icon="utensils" title="Comer con intención" description="Registra tus comidas principales" progress={`${Math.min(todayData.mainMeals.length, 3)} / 3`} reward={state.settings.questXp.meals} completed={mealsComplete} onClick={onOpenMeal} />
           <QuestRow icon="leaf" title="Verduras" description="Inclúyelas en 2 comidas" progress={`${Math.min(todayData.vegetableMeals.length, 2)} / 2`} reward={state.settings.questXp.vegetables} completed={vegetablesComplete} onClick={() => onNavigate("food")} />
         </div>
