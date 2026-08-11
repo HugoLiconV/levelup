@@ -12,7 +12,11 @@ export type MealTag =
   | "Postre / azúcar añadida"
   | "Muy procesado"
   | "Carne procesada"
-  | "Alcohol";
+  | "Alcohol"
+  | "Lácteos"
+  | "Huevo"
+  | "Frito"
+  | "Grano refinado";
 
 export type ExerciseType =
   | "Caminata"
@@ -238,6 +242,10 @@ export const MEAL_TAGS: MealTag[] = [
   "Muy procesado",
   "Carne procesada",
   "Alcohol",
+  "Lácteos",
+  "Huevo",
+  "Frito",
+  "Grano refinado",
 ];
 
 export const ACHIEVEMENT_META: Record<AchievementId, { title: string; description: string; icon: string }> = {

@@ -77,6 +77,12 @@ const navItems: Array<{ id: Screen; label: string; icon: IconName }> = [
 ];
 
 const mealTypes: MealType[] = ["Desayuno", "Comida", "Cena", "Snack"];
+function defaultMealTypeForHour(hour: number): MealType {
+  if (hour >= 5 && hour < 11) return "Desayuno";
+  if (hour >= 11 && hour < 17) return "Comida";
+  if (hour >= 17 && hour < 22) return "Cena";
+  return "Snack";
+}
 const exerciseTypes: Array<{ id: ExerciseType; label: string; icon: IconName }> = [
   { id: "Caminata", label: "Caminata", icon: "walk" },
   { id: "Gimnasio", label: "Gimnasio", icon: "gym" },
@@ -833,11 +839,80 @@ function Modal({ title, eyebrow, children, onClose }: { title: string; eyebrow?:
 }
 
 function MealModal({ meal, onClose, onSave }: { meal?: Meal; onClose: () => void; onSave: (meal: Omit<Meal, "id" | "date" | "createdAt">) => void }) {
-  const [type, setType] = useState<MealType>(meal?.type ?? "Comida");
+  const [type, setType] = useState<MealType>(meal?.type ?? defaultMealTypeForHour(new Date().getHours()));
   const [description, setDescription] = useState(meal?.description ?? "");
   const [tags, setTags] = useState<MealTag[]>(meal?.tags ?? []);
+  const [manuallyToggled, setManuallyToggled] = useState<Set<MealTag>>(new Set());
+  const [suggesting, setSuggesting] = useState(false);
+  const suggestedForRef = useRef<string | null>(null);
+  const debounceRef = useRef<number | null>(null);
+  const abortRef = useRef<AbortController | null>(null);
+  const firedRef = useRef(false);
+
+  const applySuggestion = (suggested: MealTag[]) => {
+    setTags((current) => {
+      const kept = current.filter((item) => manuallyToggled.has(item));
+      const added = suggested.filter((item) => !manuallyToggled.has(item));
+      return Array.from(new Set([...kept, ...added]));
+    });
+  };
+
+  const fireSuggestion = async (text: string) => {
+    if (text.length < 8 || text === suggestedForRef.current) return;
+    firedRef.current = true;
+    abortRef.current?.abort();
+    const controller = new AbortController();
+    abortRef.current = controller;
+    setSuggesting(true);
+    try {
+      const response = await fetch("/api/meal-tags", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ description: text }),
+        signal: controller.signal,
+      });
+      if (!response.ok) return;
+      const data = await response.json() as { tags?: MealTag[] };
+      if (controller.signal.aborted) return;
+      suggestedForRef.current = text;
+      applySuggestion((data.tags ?? []).filter((item) => MEAL_TAGS.includes(item)));
+    } catch {
+      // Network error or aborted request — fail silently, manual tagging still works.
+    } finally {
+      if (abortRef.current === controller) setSuggesting(false);
+    }
+  };
+
+  useEffect(() => {
+    if (debounceRef.current) window.clearTimeout(debounceRef.current);
+    firedRef.current = false;
+    const text = description.trim();
+    if (text.length < 8 || text === suggestedForRef.current) return;
+    debounceRef.current = window.setTimeout(() => fireSuggestion(text), 900);
+    return () => { if (debounceRef.current) window.clearTimeout(debounceRef.current); };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [description]);
+
+  const handleDescriptionChange = (value: string) => {
+    setDescription(value);
+    setManuallyToggled(new Set());
+  };
+
+  const handleDescriptionBlur = () => {
+    const text = description.trim();
+    if (!firedRef.current && text.length >= 8 && text !== suggestedForRef.current) {
+      if (debounceRef.current) window.clearTimeout(debounceRef.current);
+      fireSuggestion(text);
+    }
+  };
+
+  const toggleTag = (tag: MealTag) => {
+    setManuallyToggled((current) => new Set(current).add(tag));
+    setTags((current) => current.includes(tag) ? current.filter((item) => item !== tag) : [...current, tag]);
+  };
+
   const submit = (event: FormEvent) => { event.preventDefault(); if (!description.trim()) return; onSave({ type, description: description.trim(), tags }); };
-  return <Modal title="Registrar comida" eyebrow="MENOS DE 10 SEGUNDOS" onClose={onClose}><form className="modal-form" onSubmit={submit}><div className="field"><label>Tipo de comida</label><div className="choice-grid meal-choice-grid">{mealTypes.map((item) => <button type="button" key={item} className={classNames("choice-button", type === item && "selected")} onClick={() => setType(item)}>{item}</button>)}</div></div><div className="field"><label htmlFor="meal-description">¿Qué comiste?</label><textarea id="meal-description" value={description} onChange={(event) => setDescription(event.target.value)} placeholder="Ej. Salmón + arroz + verduras asadas" rows={3} autoFocus /></div><div className="field"><label>Etiquetas rápidas <small>(opcional)</small></label><div className="tag-picker">{MEAL_TAGS.map((tag) => <button type="button" key={tag} className={classNames("tag-option", tags.includes(tag) && "selected")} onClick={() => setTags((current) => current.includes(tag) ? current.filter((item) => item !== tag) : [...current, tag])}>{tag}</button>)}</div></div><div className="modal-actions"><button type="button" className="secondary-button" onClick={onClose}>Cancelar</button><button type="submit" className="primary-button" disabled={!description.trim()}>Guardar comida</button></div></form></Modal>;
+  return <Modal title="Registrar comida" eyebrow="MENOS DE 10 SEGUNDOS" onClose={onClose}><form className="modal-form" onSubmit={submit}><div className="field"><label>Tipo de comida</label><div className="choice-grid meal-choice-grid">{mealTypes.map((item) => <button type="button" key={item} className={classNames("choice-button", type === item && "selected")} onClick={() => setType(item)}>{item}</button>)}</div></div><div className="field"><label htmlFor="meal-description">¿Qué comiste?</label><textarea id="meal-description" value={description} onChange={(event) => handleDescriptionChange(event.target.value)} onBlur={handleDescriptionBlur} placeholder="Ej. Salmón + arroz + verduras asadas" rows={3} autoFocus /></div><div className="field"><label>Etiquetas rápidas <small>(opcional)</small>{suggesting && <span className="ai-suggesting"><Icon name="sparkles" size={12} /> Sugerido por IA…</span>}</label><div className="tag-picker">{MEAL_TAGS.map((tag) => <button type="button" key={tag} className={classNames("tag-option", tags.includes(tag) && "selected", tags.includes(tag) && !manuallyToggled.has(tag) && "ai-suggested")} onClick={() => toggleTag(tag)}>{tag}</button>)}</div></div><div className="modal-actions"><button type="button" className="secondary-button" onClick={onClose}>Cancelar</button><button type="submit" className="primary-button" disabled={!description.trim()}>Guardar comida</button></div></form></Modal>;
 }
 
 function ExerciseModal({ preset, onClose, onSave }: { preset?: { activity: ExerciseType; duration: number }; onClose: () => void; onSave: (exercise: { activity: ExerciseType; duration: number; note: string }) => void }) {
