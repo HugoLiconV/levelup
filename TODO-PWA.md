@@ -41,15 +41,17 @@ Estimated effort: an additional 0.5–1.5 days.
 
 ## Phase 3 — Reliable notifications
 
-- [ ] Replace the current in-page timer notification with Web Push for reminders that must work after iOS suspends or closes the app.
-- [ ] Register the service worker for push events.
-- [ ] Request notification permission only after a direct user action.
-- [ ] Create and store push subscriptions on the server.
-- [ ] Add server-side reminder scheduling and push delivery.
-- [ ] Handle notification clicks and route users back into the appropriate app screen.
-- [ ] Add unsubscribe and notification-preference controls.
+- [x] Replace the current in-page timer notification with Web Push for reminders that must work after iOS suspends or closes the app.
+- [x] Register the service worker for push events.
+- [x] Request notification permission only after a direct user action.
+- [x] Create and store push subscriptions on the server.
+- [x] Add server-side reminder scheduling and push delivery.
+- [x] Handle notification clicks and route users back into the appropriate app screen.
+- [x] Add unsubscribe and notification-preference controls.
 - [ ] Test permission denial, revocation, expired subscriptions, Focus modes, and notifications while the app is closed.
 - [ ] Verify behavior on an installed Home Screen app running iOS 16.4 or newer.
+
+Implementation status: code and production deployment complete; Supabase migration, Edge Function, cron scheduler, and Vercel environment configuration are live. Physical-device notification verification remains.
 
 Estimated effort: an additional 2–5 days.
 

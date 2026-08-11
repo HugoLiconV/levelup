@@ -393,6 +393,8 @@ textarea { resize: vertical; }
 .toggle.on span { transform: translateX(19px); }
 .reminder-time { display: flex; align-items: center; justify-content: space-between; padding: 10px 13px; color: var(--ink-soft); font-size: 11px; background: #f7faf6; }
 .reminder-time input { padding: 5px; border: 1px solid var(--line); border-radius: 8px; background: var(--surface); font-size: 11px; }
+.notification-status { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 11px 13px; color: var(--ink-soft); font-size: 11px; background: #fbfcfa; }
+.notification-status .text-button { font-size: 11px; }
 .nutrition-setting { display: flex; align-items: flex-start; gap: 11px; padding: 15px; border: 1px solid #dfe8df; border-radius: 17px; background: #f1f8f1; }
 .setting-icon { display: grid; flex: 0 0 auto; place-items: center; width: 37px; height: 37px; border-radius: 12px; color: var(--teal); background: var(--mint); }
 .nutrition-setting > div:nth-child(2) { flex: 1; min-width: 0; }

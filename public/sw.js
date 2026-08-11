@@ -1,4 +1,4 @@
-const CACHE_VERSION = "levelup-shell-v1";
+const CACHE_VERSION = "levelup-shell-v2";
 const RUNTIME_CACHE = `${CACHE_VERSION}-runtime`;
 const PRECACHE_URLS = [
   "/",
@@ -49,6 +49,56 @@ self.addEventListener("activate", (event) => {
 
 self.addEventListener("message", (event) => {
   if (event.data?.type === "ACTIVATE_UPDATE") self.skipWaiting();
+});
+
+self.addEventListener("push", (event) => {
+  let payload = {
+    title: "LevelUp",
+    body: "Una pequeña acción también cuenta.",
+    url: "/?screen=today",
+    tag: "levelup-reminder",
+  };
+
+  try {
+    if (event.data) payload = { ...payload, ...event.data.json() };
+  } catch {
+    // Display the safe fallback payload when a push body is malformed.
+  }
+
+  event.waitUntil(
+    self.registration.showNotification(payload.title, {
+      body: payload.body,
+      icon: "/icon-192x192.png",
+      badge: "/icon-192x192.png",
+      tag: payload.tag,
+      renotify: true,
+      data: { url: payload.url },
+    }),
+  );
+});
+
+self.addEventListener("notificationclick", (event) => {
+  event.notification.close();
+  const targetUrl = new URL(event.notification.data?.url || "/?screen=today", self.location.origin).href;
+
+  event.waitUntil(
+    self.clients.matchAll({ type: "window", includeUncontrolled: true }).then((clients) => {
+      const existing = clients.find((client) => new URL(client.url).origin === self.location.origin);
+      if (existing) return existing.navigate(targetUrl).then((client) => client?.focus());
+      return self.clients.openWindow(targetUrl);
+    }),
+  );
+});
+
+self.addEventListener("pushsubscriptionchange", (event) => {
+  event.waitUntil(
+    self.clients.matchAll({ type: "window", includeUncontrolled: true }).then((clients) => {
+      clients.forEach((client) => client.postMessage({
+        type: "PUSH_SUBSCRIPTION_CHANGED",
+        subscription: event.newSubscription ? event.newSubscription.toJSON() : null,
+      }));
+    }),
+  );
 });
 
 function isSameOrigin(request) {

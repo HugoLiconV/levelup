@@ -4,6 +4,19 @@ import { useEffect, useMemo, useRef, useState, type FormEvent, type ReactNode } 
 import { Icon, type IconName } from "./components/Icons";
 import { InstallGuide } from "./components/InstallGuide";
 import {
+  cancelRemoteMovementTimer,
+  enablePushNotifications,
+  getNotificationPermission,
+  getNotificationTimezone,
+  getRemoteMovementTimer,
+  getStoredTimerEndsAt,
+  isPushSupported,
+  startRemoteMovementTimer,
+  storeTimerEndsAt,
+  unsubscribePushNotifications,
+  updatePushPreferences,
+} from "./lib/notifications";
+import {
   ACHIEVEMENT_META,
   ACHIEVEMENT_ORDER,
   FOOD_GUIDE,
@@ -46,6 +59,7 @@ import {
 } from "./lib/levelup";
 
 type Screen = "today" | "food" | "move" | "progress" | "more";
+type NotificationPermissionState = NotificationPermission | "unsupported";
 type ModalState =
   | null
   | { type: "meal"; meal?: Meal }
@@ -99,14 +113,22 @@ function getGreeting(): string {
   return "Buenas noches";
 }
 
+function getRequestedScreen(): Screen {
+  const requestedScreen = new URLSearchParams(window.location.search).get("screen");
+  return navItems.some((item) => item.id === requestedScreen) ? requestedScreen as Screen : "today";
+}
+
 export default function Home() {
   const [state, setState] = useState<AppState>(() => createSeedState());
   const [ready, setReady] = useState(false);
   const [screen, setScreen] = useState<Screen>("today");
   const [modal, setModal] = useState<ModalState>(null);
   const [notice, setNotice] = useState<string | null>(null);
-  const [timerEndsAt, setTimerEndsAt] = useState<number | null>(null);
+  const [timerEndsAt, setTimerEndsAt] = useState<number | null>(() => getStoredTimerEndsAt());
   const [now, setNow] = useState(() => Date.now());
+  const [notificationPermission, setNotificationPermission] = useState<NotificationPermissionState>("default");
+  const [notificationSupported, setNotificationSupported] = useState(false);
+  const [notificationBusy, setNotificationBusy] = useState(false);
   const importRef = useRef<HTMLInputElement>(null);
   const previousLevelRef = useRef<number | null>(null);
 
@@ -120,6 +142,11 @@ export default function Home() {
   const level = useMemo(() => getLevel(totalXp), [totalXp]);
 
   useEffect(() => {
+    const frame = window.requestAnimationFrame(() => setScreen(getRequestedScreen()));
+    return () => window.cancelAnimationFrame(frame);
+  }, []);
+
+  useEffect(() => {
     const frame = window.requestAnimationFrame(() => {
       const loaded = loadState();
       setState(syncAchievements(loaded, toDateInput(new Date())));
@@ -127,6 +154,70 @@ export default function Home() {
     });
     return () => window.cancelAnimationFrame(frame);
   }, []);
+
+  useEffect(() => {
+    const frame = window.requestAnimationFrame(() => {
+      setNotificationSupported(isPushSupported());
+      setNotificationPermission(getNotificationPermission());
+    });
+    if (!ready || !isPushSupported()) return () => window.cancelAnimationFrame(frame);
+
+    let disposed = false;
+    void getRemoteMovementTimer()
+      .then((remoteTimer) => {
+        if (disposed) return;
+        setTimerEndsAt(remoteTimer);
+        storeTimerEndsAt(remoteTimer);
+      })
+      .catch(() => {
+        // The local timer remains usable when the server is not configured or unreachable.
+      });
+    return () => {
+      disposed = true;
+      window.cancelAnimationFrame(frame);
+    };
+  }, [ready]);
+
+  useEffect(() => {
+    const refreshPermission = () => {
+      const permission = getNotificationPermission();
+      setNotificationPermission(permission);
+      if (state.settings.reminderEnabled && permission !== "granted") {
+        setState((previous) => ({ ...previous, settings: { ...previous.settings, reminderEnabled: false } }));
+        setTimerEndsAt(null);
+        void cancelRemoteMovementTimer().catch(() => undefined);
+        void updatePushPreferences({
+          reminderEnabled: false,
+          reminderTime: state.settings.reminderTime,
+          timezone: getNotificationTimezone(),
+        }).catch(() => undefined);
+      }
+    };
+    window.addEventListener("focus", refreshPermission);
+    document.addEventListener("visibilitychange", refreshPermission);
+    return () => {
+      window.removeEventListener("focus", refreshPermission);
+      document.removeEventListener("visibilitychange", refreshPermission);
+    };
+  }, [state.settings.reminderEnabled, state.settings.reminderTime]);
+
+  useEffect(() => {
+    storeTimerEndsAt(timerEndsAt);
+  }, [timerEndsAt]);
+
+  useEffect(() => {
+    if (!ready || !notificationSupported || !state.settings.reminderEnabled) return;
+    const handleSubscriptionChange = (event: MessageEvent<{ type?: string }>) => {
+      if (event.data?.type !== "PUSH_SUBSCRIPTION_CHANGED") return;
+      void enablePushNotifications({
+        reminderEnabled: true,
+        reminderTime: state.settings.reminderTime,
+        timezone: getNotificationTimezone(),
+      }).catch(() => undefined);
+    };
+    navigator.serviceWorker?.addEventListener("message", handleSubscriptionChange);
+    return () => navigator.serviceWorker?.removeEventListener("message", handleSubscriptionChange);
+  }, [notificationSupported, ready, state.settings.reminderEnabled, state.settings.reminderTime]);
 
   useEffect(() => {
     if (ready) saveState(state);
@@ -158,9 +249,7 @@ export default function Home() {
       const current = Date.now();
       setNow(current);
       if (current >= timerEndsAt) {
-        if (state.settings.reminderEnabled && "Notification" in window && Notification.permission === "granted") {
-          new Notification("Hora de moverte", { body: "Una pausa corta lejos del escritorio también cuenta.", icon: "/icon.svg" });
-        }
+        void cancelRemoteMovementTimer().catch(() => undefined);
         setTimerEndsAt(null);
         setNotice("Es buen momento para levantarte y moverte un poco");
       }
@@ -259,17 +348,87 @@ export default function Home() {
   };
 
   const toggleReminders = async (enabled: boolean) => {
-    if (enabled && typeof window !== "undefined" && "Notification" in window && Notification.permission === "default") {
-      await Notification.requestPermission();
+    if (notificationBusy) return;
+    setNotificationBusy(true);
+    try {
+      const preferences = {
+        reminderEnabled: enabled,
+        reminderTime: state.settings.reminderTime,
+        timezone: getNotificationTimezone(),
+      };
+      if (enabled) {
+        const permission = await enablePushNotifications(preferences);
+        setNotificationPermission(permission);
+        if (permission !== "granted") {
+          setNotice(permission === "denied" ? "Las notificaciones están bloqueadas en este dispositivo" : "No activamos las notificaciones");
+          return;
+        }
+        if (timerEndsAt && timerEndsAt > Date.now()) {
+          const remainingSeconds = Math.ceil((timerEndsAt - Date.now()) / 1000);
+          if (remainingSeconds >= 60) await startRemoteMovementTimer(remainingSeconds);
+        }
+        updateSettings({ reminderEnabled: true });
+        setNotice("Recordatorios activados en este dispositivo");
+      } else {
+        let serverError: Error | null = null;
+        try {
+          await updatePushPreferences(preferences);
+        } catch (error) {
+          serverError = error instanceof Error ? error : new Error("No pudimos sincronizar el cambio");
+        }
+        await cancelRemoteMovementTimer().catch(() => undefined);
+        setTimerEndsAt(null);
+        updateSettings({ reminderEnabled: false });
+        setNotice(serverError ? "Recordatorios pausados en este dispositivo" : "Recordatorios pausados");
+      }
+    } catch (error) {
+      setNotice(error instanceof Error ? error.message : "No pudimos configurar las notificaciones");
+    } finally {
+      setNotificationBusy(false);
     }
-    updateSettings({ reminderEnabled: enabled });
-    setNotice(enabled ? "Recordatorios activados en este dispositivo" : "Recordatorios pausados");
+  };
+
+  const updateReminderTime = (reminderTime: string) => {
+    updateSettings({ reminderTime });
+    if (state.settings.reminderEnabled) {
+      void updatePushPreferences({
+        reminderEnabled: true,
+        reminderTime,
+        timezone: getNotificationTimezone(),
+      }).catch((error: unknown) => setNotice(error instanceof Error ? error.message : "No pudimos guardar la hora"));
+    }
+  };
+
+  const unsubscribeNotifications = async () => {
+    if (notificationBusy) return;
+    setNotificationBusy(true);
+    try {
+      let serverError: Error | null = null;
+      try {
+        await unsubscribePushNotifications();
+      } catch (error) {
+        serverError = error instanceof Error ? error : new Error("No pudimos cancelar las notificaciones en el servidor");
+      }
+      await cancelRemoteMovementTimer().catch(() => undefined);
+      setTimerEndsAt(null);
+      updateSettings({ reminderEnabled: false });
+      setNotificationPermission(getNotificationPermission());
+      setNotice(serverError ? "Notificaciones quitadas de este dispositivo; el servidor se actualizará al volver a conectarte" : "Este dispositivo ya no recibirá recordatorios");
+    } finally {
+      setNotificationBusy(false);
+    }
   };
 
   const startTimer = () => {
-    setTimerEndsAt(Date.now() + 45 * 60 * 1000);
+    const localEndsAt = Date.now() + 45 * 60 * 1000;
+    setTimerEndsAt(localEndsAt);
     setNow(Date.now());
     setNotice("Temporizador listo · te aviso en 45 min");
+    if (state.settings.reminderEnabled) {
+      void startRemoteMovementTimer().catch((error: unknown) => {
+        setNotice(error instanceof Error ? `${error.message} · El temporizador local sigue activo` : "El temporizador local sigue activo");
+      });
+    }
   };
 
   const exportData = () => {
@@ -369,6 +528,11 @@ export default function Home() {
             state={state}
             onSettingsChange={updateSettings}
             onToggleReminders={toggleReminders}
+            onReminderTimeChange={updateReminderTime}
+            onUnsubscribeNotifications={unsubscribeNotifications}
+            notificationPermission={notificationPermission}
+            notificationSupported={notificationSupported}
+            notificationBusy={notificationBusy}
             onOpenNutrition={() => setModal({ type: "nutrition" })}
             onEditIntention={(intention) => setModal({ type: "intention", intention })}
             onExport={exportData}
@@ -588,11 +752,11 @@ function AchievementsSection({ state }: { state: AppState }) {
   return <section><div className="section-heading"><div><p className="eyebrow">PEQUEÑOS HITOS</p><h2>Logros</h2></div><span className="quiet-count">{state.achievements.length} / {ACHIEVEMENT_ORDER.length}</span></div><div className="achievement-grid">{ACHIEVEMENT_ORDER.map((id) => { const achievement = state.achievements.find((item) => item.id === id); const meta = ACHIEVEMENT_META[id]; return <div className={classNames("achievement", !achievement && "locked")} key={id}><span className="achievement-icon"><Icon name={meta.icon as IconName} size={17} /></span><div><strong>{meta.title}</strong><small>{achievement ? meta.description : "Aún por descubrir"}</small></div>{achievement && <Icon name="checkCircle" size={16} />}</div>; })}</div></section>;
 }
 
-function MoreView({ state, onSettingsChange, onToggleReminders, onOpenNutrition, onEditIntention, onExport, onImport, onReset }: { state: AppState; onSettingsChange: (patch: Partial<AppSettings>) => void; onToggleReminders: (enabled: boolean) => void; onOpenNutrition: () => void; onEditIntention: (intention: ImplementationIntention) => void; onExport: () => void; onImport: () => void; onReset: () => void }) {
+function MoreView({ state, onSettingsChange, onToggleReminders, onReminderTimeChange, onUnsubscribeNotifications, notificationPermission, notificationSupported, notificationBusy, onOpenNutrition, onEditIntention, onExport, onImport, onReset }: { state: AppState; onSettingsChange: (patch: Partial<AppSettings>) => void; onToggleReminders: (enabled: boolean) => void; onReminderTimeChange: (reminderTime: string) => void; onUnsubscribeNotifications: () => void; notificationPermission: NotificationPermissionState; notificationSupported: boolean; notificationBusy: boolean; onOpenNutrition: () => void; onEditIntention: (intention: ImplementationIntention) => void; onExport: () => void; onImport: () => void; onReset: () => void }) {
   return <div className="page-stack"><PageHeader eyebrow="MÁS" title="Tu plan" subtitle="Ajustes simples para que LevelUp siga siendo tuyo." />
     <InstallGuide />
     <section><div className="section-heading"><div><p className="eyebrow">IF → THEN</p><h2>Mi plan</h2></div></div><div className="intentions-list">{state.intentions.map((intention) => <button className="intention-row" key={intention.id} onClick={() => onEditIntention(intention)}><span className="intention-if">SI <strong>{intention.ifText}</strong></span><Icon name="arrow" size={15} /><span className="intention-then">ENTONCES <strong>{intention.thenText}</strong></span><Icon name="edit" size={14} /></button>)}</div></section>
-    <section><div className="section-heading"><div><p className="eyebrow">AJUSTES DEL RETO</p><h2>Lo que te funciona</h2></div></div><div className="settings-list"><label className="setting-row"><span><strong>Fecha de la cita</strong><small>{formatLongDate(state.settings.appointmentDate)}</small></span><input type="date" value={state.settings.appointmentDate} onChange={(event) => onSettingsChange({ appointmentDate: event.target.value })} /></label><label className="setting-row"><span><strong>Ventana de laboratorios</strong><small>Edita la fecha cuando la tengas clara</small></span><input type="date" value={state.settings.labWindowDate} onChange={(event) => onSettingsChange({ labWindowDate: event.target.value })} /></label><label className="setting-row"><span><strong>Meta de actividad semanal</strong><small>Minutos que cuentan para tu semana</small></span><span className="inline-input"><input type="number" min="10" step="5" value={state.settings.weeklyActivityGoal} onChange={(event) => onSettingsChange({ weeklyActivityGoal: Number(event.target.value) || 0 })} /><em>min</em></span></label><label className="setting-row"><span><strong>Sesiones de fuerza</strong><small>Objetivo semanal</small></span><span className="inline-input"><input type="number" min="0" max="7" value={state.settings.strengthGoal} onChange={(event) => onSettingsChange({ strengthGoal: Number(event.target.value) || 0 })} /><em>/ semana</em></span></label><label className="setting-row"><span><strong>Pausas de movimiento</strong><small>Por día de trabajo</small></span><span className="inline-input"><input type="number" min="1" max="12" value={state.settings.dailyMovementGoal} onChange={(event) => onSettingsChange({ dailyMovementGoal: Number(event.target.value) || 1 })} /><em>/ día</em></span></label><label className="setting-row"><span><strong>{state.settings.supplementName}</strong><small>Texto de tu hábito</small></span><input className="setting-text-input" type="text" value={state.settings.supplementDose} onChange={(event) => onSettingsChange({ supplementDose: event.target.value })} /></label><div className="setting-row reminder-setting"><span><strong>Recordatorios</strong><small>Omega-3 y pausas dentro de la app</small></span><button className={classNames("toggle", state.settings.reminderEnabled && "on")} onClick={() => onToggleReminders(!state.settings.reminderEnabled)} aria-pressed={state.settings.reminderEnabled}><span /></button></div>{state.settings.reminderEnabled && <label className="reminder-time"><span>Hora de omega-3</span><input type="time" value={state.settings.reminderTime} onChange={(event) => onSettingsChange({ reminderTime: event.target.value })} /></label>}</div></section>
+    <section><div className="section-heading"><div><p className="eyebrow">AJUSTES DEL RETO</p><h2>Lo que te funciona</h2></div></div><div className="settings-list"><label className="setting-row"><span><strong>Fecha de la cita</strong><small>{formatLongDate(state.settings.appointmentDate)}</small></span><input type="date" value={state.settings.appointmentDate} onChange={(event) => onSettingsChange({ appointmentDate: event.target.value })} /></label><label className="setting-row"><span><strong>Ventana de laboratorios</strong><small>Edita la fecha cuando la tengas clara</small></span><input type="date" value={state.settings.labWindowDate} onChange={(event) => onSettingsChange({ labWindowDate: event.target.value })} /></label><label className="setting-row"><span><strong>Meta de actividad semanal</strong><small>Minutos que cuentan para tu semana</small></span><span className="inline-input"><input type="number" min="10" step="5" value={state.settings.weeklyActivityGoal} onChange={(event) => onSettingsChange({ weeklyActivityGoal: Number(event.target.value) || 0 })} /><em>min</em></span></label><label className="setting-row"><span><strong>Sesiones de fuerza</strong><small>Objetivo semanal</small></span><span className="inline-input"><input type="number" min="0" max="7" value={state.settings.strengthGoal} onChange={(event) => onSettingsChange({ strengthGoal: Number(event.target.value) || 0 })} /><em>/ semana</em></span></label><label className="setting-row"><span><strong>Pausas de movimiento</strong><small>Por día de trabajo</small></span><span className="inline-input"><input type="number" min="1" max="12" value={state.settings.dailyMovementGoal} onChange={(event) => onSettingsChange({ dailyMovementGoal: Number(event.target.value) || 1 })} /><em>/ día</em></span></label><label className="setting-row"><span><strong>{state.settings.supplementName}</strong><small>Texto de tu hábito</small></span><input className="setting-text-input" type="text" value={state.settings.supplementDose} onChange={(event) => onSettingsChange({ supplementDose: event.target.value })} /></label><div className="setting-row reminder-setting"><span><strong>Recordatorios</strong><small>{notificationSupported ? "Omega-3 y pausas aunque cierres la app" : "Este navegador no permite notificaciones push"}</small></span><button className={classNames("toggle", state.settings.reminderEnabled && "on")} disabled={notificationBusy || !notificationSupported} onClick={() => onToggleReminders(!state.settings.reminderEnabled)} aria-pressed={state.settings.reminderEnabled}><span /></button></div>{state.settings.reminderEnabled && <label className="reminder-time"><span>Hora de omega-3</span><input type="time" value={state.settings.reminderTime} onChange={(event) => onReminderTimeChange(event.target.value)} /></label>}<div className="notification-status"><span>{notificationPermission === "granted" ? "Notificaciones permitidas" : notificationPermission === "denied" ? "Notificaciones bloqueadas por el navegador" : notificationPermission === "unsupported" ? "Notificaciones no disponibles" : "Notificaciones aún no activadas"}</span>{state.settings.reminderEnabled && <button className="text-button" disabled={notificationBusy} onClick={onUnsubscribeNotifications}>Desvincular dispositivo</button>}</div></div></section>
     <section className="nutrition-setting"><div className="setting-icon"><Icon name="leaf" size={18} /></div><div><p className="eyebrow">NUTRIÓLOGO</p><h3>{state.nutritionPlan.status === "pending" ? "Plan pendiente" : "Plan personal guardado"}</h3><p>{state.nutritionPlan.status === "pending" ? "Agrega recomendaciones cuando tengas tu cita." : "Tus recomendaciones están listas para consultar."}</p></div><button className="text-button" onClick={onOpenNutrition}>{state.nutritionPlan.status === "pending" ? "Agregar" : "Editar"}</button></section>
     <section><div className="section-heading"><div><p className="eyebrow">RECOMPENSAS</p><h2>XP por quest</h2></div></div><div className="settings-list xp-settings-list">{([{ id: "omega", label: "Omega-3" }, { id: "movement", label: "Pausas de movimiento" }, { id: "exercise", label: "Actividad" }, { id: "meals", label: "Comidas del día" }, { id: "vegetables", label: "Verduras" }, { id: "fruit", label: "Fruta" }, { id: "partnerWalk", label: "Caminata juntos" }] as Array<{ id: QuestId; label: string }>).map((quest) => <label className="setting-row" key={quest.id}><span><strong>{quest.label}</strong><small>Máximo de la quest</small></span><span className="inline-input"><input type="number" min="0" max="100" value={state.settings.questXp[quest.id]} onChange={(event) => onSettingsChange({ questXp: { ...state.settings.questXp, [quest.id]: Number(event.target.value) || 0 } })} /><em>XP</em></span></label>)}</div></section>
     <section><div className="section-heading"><div><p className="eyebrow">TUS DATOS</p><h2>Local y bajo tu control</h2></div></div><div className="data-actions"><button onClick={onExport}><Icon name="download" size={17} /><span><strong>Exportar datos</strong><small>Guardar un respaldo JSON</small></span><Icon name="arrow" size={15} /></button><button onClick={onImport}><Icon name="upload" size={17} /><span><strong>Importar datos</strong><small>Restaurar un respaldo JSON</small></span><Icon name="arrow" size={15} /></button><button className="danger-action" onClick={onReset}><Icon name="trash" size={17} /><span><strong>Restablecer app</strong><small>Borrar el progreso de este dispositivo</small></span><Icon name="arrow" size={15} /></button></div></section>
