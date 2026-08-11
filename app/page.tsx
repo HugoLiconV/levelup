@@ -303,6 +303,13 @@ export default function Home() {
     setModal(null);
   };
 
+  const deleteMeal = (mealId: string) => {
+    apply((previous) => ({
+      ...previous,
+      meals: previous.meals.filter((meal) => meal.id !== mealId),
+    }), "Comida eliminada");
+  };
+
   const addExercise = (exercise: { activity: ExerciseType; duration: number; note: string }) => {
     apply((previous) => ({
       ...previous,
@@ -496,7 +503,7 @@ export default function Home() {
             onNavigate={setScreen}
           />
         )}
-        {screen === "food" && <FoodView state={state} today={today} todayData={todayData} onOpenMeal={() => setModal({ type: "meal" })} onRepeatMeal={repeatRecentMeal} onNutrition={() => setModal({ type: "nutrition" })} />}
+        {screen === "food" && <FoodView state={state} today={today} todayData={todayData} onOpenMeal={() => setModal({ type: "meal" })} onRepeatMeal={repeatRecentMeal} onNutrition={() => setModal({ type: "nutrition" })} onDeleteMeal={deleteMeal} />}
         {screen === "move" && (
           <MoveView
             state={state}
@@ -662,7 +669,7 @@ function DotProgress({ value, max, color = "mint" }: { value: number; max: numbe
   return <div className="dot-progress" aria-label={`${value} de ${max}`}><span>{Array.from({ length: max }, (_, index) => <i key={index} className={classNames(index < value && "filled", color)} />)}</span><b>{Math.min(value, max)} / {max}</b></div>;
 }
 
-function FoodView({ state, today, todayData, onOpenMeal, onRepeatMeal, onNutrition }: { state: AppState; today: string; todayData: ReturnType<typeof getDayData>; onOpenMeal: () => void; onRepeatMeal: () => void; onNutrition: () => void }) {
+function FoodView({ state, today, todayData, onOpenMeal, onRepeatMeal, onNutrition, onDeleteMeal }: { state: AppState; today: string; todayData: ReturnType<typeof getDayData>; onOpenMeal: () => void; onRepeatMeal: () => void; onNutrition: () => void; onDeleteMeal: (mealId: string) => void }) {
   const [tab, setTab] = useState<"registro" | "guia">("registro");
   const recentMeal = [...state.meals].sort((a, b) => b.createdAt.localeCompare(a.createdAt))[0];
   return <div className="page-stack">
@@ -671,15 +678,18 @@ function FoodView({ state, today, todayData, onOpenMeal, onRepeatMeal, onNutriti
     {tab === "registro" ? <>
       <section className="food-today-head"><div><p className="eyebrow">HOY · {formatShortDate(today)}</p><h2>{todayData.mainMeals.length} comidas registradas</h2></div><div className="meal-score"><span>{todayData.vegetableMeals.length}</span><small>con verduras</small></div></section>
       {recentMeal && <button className="repeat-meal" onClick={onRepeatMeal}><span className="repeat-icon"><Icon name="refresh" size={17} /></span><span><strong>Repetir comida reciente</strong><small>{recentMeal.description}</small></span><Icon name="arrow" size={16} /></button>}
-      <div className="meal-list">{todayData.meals.length === 0 ? <EmptyState icon="utensils" title="Tu registro empieza aquí" description="Una frase sencilla es suficiente. No necesitas contar calorías." actionLabel="Registrar comida" onAction={onOpenMeal} /> : todayData.meals.map((meal) => <MealRow key={meal.id} meal={meal} />)}</div>
+      <div className="meal-list">{todayData.meals.length === 0 ? <EmptyState icon="utensils" title="Tu registro empieza aquí" description="Una frase sencilla es suficiente. No necesitas contar calorías." actionLabel="Registrar comida" onAction={onOpenMeal} /> : todayData.meals.map((meal) => <MealRow key={meal.id} meal={meal} onDelete={onDeleteMeal} />)}</div>
       <button className="primary-button full-button" onClick={onOpenMeal}><Icon name="plus" size={18} /> Registrar comida</button>
       <section className="guide-teaser"><div className="guide-teaser-icon"><Icon name="leaf" size={20} /></div><div><p className="eyebrow">GUÍA GENERAL</p><h3>Ideas simples, sin reglas rígidas</h3><p>Mientras llega tu cita con el nutriólogo, usa esto como orientación general.</p></div><button className="icon-button soft-icon" onClick={() => setTab("guia")} aria-label="Abrir guía"><Icon name="arrow" size={17} /></button></section>
     </> : <FoodGuide plan={state.nutritionPlan} onNutrition={onNutrition} />}
   </div>;
 }
 
-function MealRow({ meal }: { meal: Meal }) {
-  return <div className="meal-row"><div className="meal-type-icon"><Icon name={meal.type === "Snack" ? "coffee" : "meal"} size={18} /></div><div className="meal-row-content"><div><span className="meal-type">{meal.type}</span><span className="meal-time">{new Intl.DateTimeFormat("es-MX", { hour: "numeric", minute: "2-digit" }).format(new Date(meal.createdAt))}</span></div><strong>{meal.description}</strong>{meal.tags.length > 0 && <div className="tag-list">{meal.tags.slice(0, 4).map((tag) => <span key={tag} className="tag-chip">{tag}</span>)}</div>}</div></div>;
+function MealRow({ meal, onDelete }: { meal: Meal; onDelete: (mealId: string) => void }) {
+  const handleDelete = () => {
+    if (window.confirm("¿Eliminar este registro de comida?")) onDelete(meal.id);
+  };
+  return <div className="meal-row"><div className="meal-type-icon"><Icon name={meal.type === "Snack" ? "coffee" : "meal"} size={18} /></div><div className="meal-row-content"><div><span className="meal-type">{meal.type}</span><span className="meal-time">{new Intl.DateTimeFormat("es-MX", { hour: "numeric", minute: "2-digit" }).format(new Date(meal.createdAt))}</span></div><strong>{meal.description}</strong>{meal.tags.length > 0 && <div className="tag-list">{meal.tags.slice(0, 4).map((tag) => <span key={tag} className="tag-chip">{tag}</span>)}</div>}</div><button className="icon-button meal-delete-button" onClick={handleDelete} aria-label="Eliminar comida"><Icon name="trash" size={16} /></button></div>;
 }
 
 function FoodGuide({ plan, onNutrition }: { plan: NutritionPlan; onNutrition: () => void }) {

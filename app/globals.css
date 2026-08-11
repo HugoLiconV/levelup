@@ -203,6 +203,8 @@ textarea { resize: vertical; }
 .meal-type { color: var(--teal); font-size: 10px; font-weight: 760; text-transform: uppercase; letter-spacing: .08em; }
 .meal-time { color: var(--ink-faint); font-size: 10px; }
 .meal-row strong { display: block; margin-top: 3px; color: var(--ink); font-size: 13px; line-height: 1.35; }
+.meal-delete-button { flex: 0 0 auto; width: 34px; height: 34px; border-radius: 11px; color: var(--ink-faint); background: transparent; }
+.meal-delete-button:hover { color: #d64545; background: rgba(214, 69, 69, .09); }
 .tag-list, .tag-picker { display: flex; flex-wrap: wrap; gap: 5px; }
 .tag-list { margin-top: 8px; }
 .tag-chip { padding: 3px 7px; border-radius: 99px; color: var(--teal-dark); background: var(--mint); font-size: 10px; font-weight: 650; }
