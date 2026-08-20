@@ -1,8 +1,10 @@
 "use client";
 
+import { useRouter } from "next/navigation";
 import { useEffect, useMemo, useRef, useState, type FormEvent, type ReactNode } from "react";
 import { Icon, type IconName } from "./components/Icons";
 import { InstallGuide } from "./components/InstallGuide";
+import { createClient } from "./lib/supabase/client";
 import {
   cancelRemoteMovementTimer,
   enablePushNotifications,
@@ -125,6 +127,7 @@ function getRequestedScreen(): Screen {
 }
 
 export default function Home() {
+  const router = useRouter();
   const [state, setState] = useState<AppState>(() => createSeedState());
   const [ready, setReady] = useState(false);
   const [screen, setScreen] = useState<Screen>("today");
@@ -489,6 +492,13 @@ export default function Home() {
     setNotice("Datos restablecidos");
   };
 
+  const signOut = async () => {
+    const supabase = createClient();
+    await supabase.auth.signOut();
+    router.push("/login");
+    router.refresh();
+  };
+
   const timerMinutes = timerEndsAt ? Math.max(0, Math.ceil((timerEndsAt - now) / 60000)) : 45;
 
   if (!ready) {
@@ -559,6 +569,7 @@ export default function Home() {
             onExport={exportData}
             onImport={() => importRef.current?.click()}
             onReset={resetData}
+            onSignOut={signOut}
           />
         )}
       </main>
@@ -811,7 +822,7 @@ function AchievementsSection({ state }: { state: AppState }) {
   return <section><div className="section-heading"><div><p className="eyebrow">PEQUEÑOS HITOS</p><h2>Logros</h2></div><span className="quiet-count">{state.achievements.length} / {ACHIEVEMENT_ORDER.length}</span></div><div className="achievement-grid">{ACHIEVEMENT_ORDER.map((id) => { const achievement = state.achievements.find((item) => item.id === id); const meta = ACHIEVEMENT_META[id]; return <div className={classNames("achievement", !achievement && "locked")} key={id}><span className="achievement-icon"><Icon name={meta.icon as IconName} size={17} /></span><div><strong>{meta.title}</strong><small>{achievement ? meta.description : "Aún por descubrir"}</small></div>{achievement && <Icon name="checkCircle" size={16} />}</div>; })}</div></section>;
 }
 
-function MoreView({ state, onSettingsChange, onToggleReminders, onReminderTimeChange, onUnsubscribeNotifications, notificationPermission, notificationSupported, notificationBusy, onOpenNutrition, onEditIntention, onExport, onImport, onReset }: { state: AppState; onSettingsChange: (patch: Partial<AppSettings>) => void; onToggleReminders: (enabled: boolean) => void; onReminderTimeChange: (reminderTime: string) => void; onUnsubscribeNotifications: () => void; notificationPermission: NotificationPermissionState; notificationSupported: boolean; notificationBusy: boolean; onOpenNutrition: () => void; onEditIntention: (intention: ImplementationIntention) => void; onExport: () => void; onImport: () => void; onReset: () => void }) {
+function MoreView({ state, onSettingsChange, onToggleReminders, onReminderTimeChange, onUnsubscribeNotifications, notificationPermission, notificationSupported, notificationBusy, onOpenNutrition, onEditIntention, onExport, onImport, onReset, onSignOut }: { state: AppState; onSettingsChange: (patch: Partial<AppSettings>) => void; onToggleReminders: (enabled: boolean) => void; onReminderTimeChange: (reminderTime: string) => void; onUnsubscribeNotifications: () => void; notificationPermission: NotificationPermissionState; notificationSupported: boolean; notificationBusy: boolean; onOpenNutrition: () => void; onEditIntention: (intention: ImplementationIntention) => void; onExport: () => void; onImport: () => void; onReset: () => void; onSignOut: () => void }) {
   return <div className="page-stack"><PageHeader eyebrow="MÁS" title="Tu plan" subtitle="Ajustes simples para que LevelUp siga siendo tuyo." />
     <InstallGuide />
     <section><div className="section-heading"><div><p className="eyebrow">IF → THEN</p><h2>Mi plan</h2></div></div><div className="intentions-list">{state.intentions.map((intention) => <button className="intention-row" key={intention.id} onClick={() => onEditIntention(intention)}><span className="intention-if">SI <strong>{intention.ifText}</strong></span><Icon name="arrow" size={15} /><span className="intention-then">ENTONCES <strong>{intention.thenText}</strong></span><Icon name="edit" size={14} /></button>)}</div></section>
@@ -819,6 +830,7 @@ function MoreView({ state, onSettingsChange, onToggleReminders, onReminderTimeCh
     <section className="nutrition-setting"><div className="setting-icon"><Icon name="leaf" size={18} /></div><div><p className="eyebrow">NUTRIÓLOGO</p><h3>{state.nutritionPlan.status === "pending" ? "Plan pendiente" : "Plan personal guardado"}</h3><p>{state.nutritionPlan.status === "pending" ? "Agrega recomendaciones cuando tengas tu cita." : "Tus recomendaciones están listas para consultar."}</p></div><button className="text-button" onClick={onOpenNutrition}>{state.nutritionPlan.status === "pending" ? "Agregar" : "Editar"}</button></section>
     <section><div className="section-heading"><div><p className="eyebrow">RECOMPENSAS</p><h2>XP por quest</h2></div></div><div className="settings-list xp-settings-list">{([{ id: "omega", label: "Omega-3" }, { id: "movement", label: "Pausas de movimiento" }, { id: "exercise", label: "Actividad" }, { id: "meals", label: "Comidas del día" }, { id: "vegetables", label: "Verduras" }, { id: "fruit", label: "Fruta" }, { id: "water", label: "Agua" }, { id: "partnerWalk", label: "Caminata juntos" }] as Array<{ id: QuestId; label: string }>).map((quest) => <label className="setting-row" key={quest.id}><span><strong>{quest.label}</strong><small>Máximo de la quest</small></span><span className="inline-input"><NumberField min={0} max={100} value={state.settings.questXp[quest.id]} onCommit={(value) => onSettingsChange({ questXp: { ...state.settings.questXp, [quest.id]: value } })} /><em>XP</em></span></label>)}</div></section>
     <section><div className="section-heading"><div><p className="eyebrow">TUS DATOS</p><h2>Local y bajo tu control</h2></div></div><div className="data-actions"><button onClick={onExport}><Icon name="download" size={17} /><span><strong>Exportar datos</strong><small>Guardar un respaldo JSON</small></span><Icon name="arrow" size={15} /></button><button onClick={onImport}><Icon name="upload" size={17} /><span><strong>Importar datos</strong><small>Restaurar un respaldo JSON</small></span><Icon name="arrow" size={15} /></button><button className="danger-action" onClick={onReset}><Icon name="trash" size={17} /><span><strong>Restablecer app</strong><small>Borrar el progreso de este dispositivo</small></span><Icon name="arrow" size={15} /></button></div></section>
+    <section><div className="section-heading"><div><p className="eyebrow">CUENTA</p><h2>Sesión</h2></div></div><div className="data-actions"><button onClick={onSignOut}><Icon name="logout" size={17} /><span><strong>Cerrar sesión</strong></span><Icon name="arrow" size={15} /></button></div></section>
     <p className="disclaimer"><Icon name="info" size={14} />Checkpoint te ayuda a registrar hábitos y progreso. No sustituye las recomendaciones de tu médico o nutriólogo.</p>
   </div>;
 }

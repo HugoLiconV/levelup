@@ -40,7 +40,8 @@ export type IconName =
   | "meal"
   | "lock"
   | "checkCircle"
-  | "droplet";
+  | "droplet"
+  | "logout";
 
 const paths: Record<IconName, React.ReactNode> = {
   home: <><path d="m3 10 9-7 9 7" /><path d="M5 9.5V21h14V9.5" /><path d="M9 21v-6h6v6" /></>,
@@ -83,6 +84,7 @@ const paths: Record<IconName, React.ReactNode> = {
   lock: <><rect x="5" y="10" width="14" height="11" rx="2" /><path d="M8 10V7a4 4 0 0 1 8 0v3" /></>,
   checkCircle: <><circle cx="12" cy="12" r="9" /><path d="m8 12 2.6 2.6L16.5 9" /></>,
   droplet: <path d="M12 2.5c3.5 4.5 7 8.7 7 12.5a7 7 0 0 1-14 0c0-3.8 3.5-8 7-12.5Z" />,
+  logout: <><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4" /><path d="m16 17 5-5-5-5" /><path d="M21 12H9" /></>,
 };
 
 export function Icon({ name, size = 20, strokeWidth = 1.8, ...props }: { name: IconName; size?: number; strokeWidth?: number } & Omit<SVGProps<SVGSVGElement>, "name">) {
