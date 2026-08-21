@@ -90,6 +90,100 @@ export interface Meal {
   createdAt: string;
 }
 
+// Date helpers in this module use the native Date weekday convention: Sunday is 0,
+// Monday is 1, and Saturday is 6. Keeping the representation numeric avoids locale
+// strings becoming part of the persisted Plan data.
+export type Weekday = 0 | 1 | 2 | 3 | 4 | 5 | 6;
+
+export interface PlanReference {
+  label: string;
+  text: string;
+}
+
+export type PlanIngredientUnit = 'g' | 'ml';
+
+export interface PlanIngredient {
+  name: string;
+  quantityText: string;
+  grams: number | null;
+  unit: PlanIngredientUnit | null;
+}
+
+export interface PlanDish {
+  name: string;
+  tags: MealTag[];
+  ingredients: PlanIngredient[];
+}
+
+export interface PlanSlot {
+  id: string;
+  name: string;
+  dishes: PlanDish[];
+}
+
+export interface DayType {
+  id: string;
+  name: string;
+  weekdays: Weekday[];
+  references: PlanReference[];
+  slots: PlanSlot[];
+}
+
+export interface PlanSupplement {
+  name: string;
+  doseText: string;
+}
+
+export interface Plan {
+  id: string;
+  startDate: string;
+  endDate: string | null;
+  dayTypes: DayType[];
+  supplements: PlanSupplement[];
+}
+
+export interface PlanSlotCompletion {
+  id: string;
+  date: string;
+  planId: string;
+  dayTypeId: string;
+  slotId: string;
+  mealId: string;
+  completedAt: string;
+}
+
+export interface PlanSupplementLog {
+  id: string;
+  date: string;
+  planId: string;
+  supplementName: string;
+  createdAt: string;
+}
+
+export interface ShoppingListState {
+  bought: Record<string, boolean>;
+}
+
+export interface ShoppingListItem {
+  name: string;
+  amount: number;
+  unit: PlanIngredientUnit;
+}
+
+export interface UnquantifiedShoppingListItem {
+  name: string;
+  quantityText: string;
+  date: string;
+  dayTypeId: string;
+  slotId: string;
+  dishName: string;
+}
+
+export interface WeeklyShoppingList {
+  items: ShoppingListItem[];
+  unquantified: UnquantifiedShoppingListItem[];
+}
+
 export interface ExerciseSession {
   id: string;
   date: string;
@@ -179,6 +273,10 @@ export interface AppState {
   labs: LabCheckpoint[];
   nutritionPlan: NutritionPlan;
   intentions: ImplementationIntention[];
+  plans: Plan[];
+  planSlotCompletions: PlanSlotCompletion[];
+  planSupplementLogs: PlanSupplementLog[];
+  shoppingListState: ShoppingListState;
 }
 
 export const STORAGE_KEY = "levelup-local-state-v1";
@@ -334,6 +432,103 @@ export function getWeekStart(value: string): string {
 
 export function getDateRange(start: string, count: number): string[] {
   return Array.from({ length: count }, (_, index) => addDays(start, index));
+}
+
+export function getWeekday(value: string): Weekday {
+  return parseDateInput(value).getDay() as Weekday;
+}
+
+function isDateInPlanRange(plan: Plan, date: string): boolean {
+  return date >= plan.startDate && (plan.endDate === null || date < plan.endDate);
+}
+
+export function getActivePlanForDate(plans: Plan[], date: string): Plan | null {
+  return plans
+    .filter(plan => isDateInPlanRange(plan, date))
+    .sort((left, right) => right.startDate.localeCompare(left.startDate))[0] ?? null;
+}
+
+export function getDayTypeForDate(plan: Plan, date: string): DayType | null {
+  const weekday = getWeekday(date);
+  return plan.dayTypes.find(dayType => dayType.weekdays.includes(weekday)) ?? null;
+}
+
+function normalizeText(value: string): string {
+  return value
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .toLowerCase()
+    .replace(/[,:]/g, ' ')
+    .replace(/\s+/g, ' ')
+    .trim();
+}
+
+function getMealTypeForPlanSlot(slotName: string): MealType {
+  const normalized = normalizeText(slotName);
+  if (normalized.startsWith('desayuno')) return 'Desayuno';
+  if (normalized.startsWith('comida') || normalized.startsWith('almuerzo')) return 'Comida';
+  if (normalized.startsWith('cena')) return 'Cena';
+  return 'Snack';
+}
+
+export function deriveMealFromPlanSlot(slot: PlanSlot): Pick<Meal, 'type' | 'description' | 'tags'> {
+  return {
+    type: getMealTypeForPlanSlot(slot.name),
+    description: slot.dishes.map(dish => dish.name).join(', '),
+    tags: Array.from(new Set(slot.dishes.flatMap(dish => dish.tags)))
+  };
+}
+
+function getShoppingIngredientName(name: string): string {
+  // These aliases only control grouping/display in the computed list. Whether
+  // something enters the list is determined by the presence of a PlanIngredient.
+  const normalized = normalizeText(name);
+  if (normalized.startsWith('pepino')) return 'Pepino';
+  if (normalized.startsWith('aguacate')) return 'Aguacate';
+  if (normalized.startsWith('tomate') || normalized.startsWith('jitomate')) return 'Tomate';
+  if (normalized.startsWith('cebolla')) return 'Cebolla';
+  return name.trim();
+}
+
+export function getWeeklyShoppingList(plan: Plan, weekStart: string): WeeklyShoppingList {
+  const items = new Map<string, ShoppingListItem>();
+  const unquantified: UnquantifiedShoppingListItem[] = [];
+
+  for (const date of getDateRange(weekStart, 7)) {
+    if (!isDateInPlanRange(plan, date)) continue;
+    const dayType = getDayTypeForDate(plan, date);
+    if (!dayType) continue;
+
+    for (const slot of dayType.slots) {
+      for (const dish of slot.dishes) {
+        for (const ingredient of dish.ingredients) {
+          const name = getShoppingIngredientName(ingredient.name);
+          if (ingredient.grams === null) {
+            unquantified.push({
+              name,
+              quantityText: ingredient.quantityText,
+              date,
+              dayTypeId: dayType.id,
+              slotId: slot.id,
+              dishName: dish.name
+            });
+            continue;
+          }
+
+          const unit = ingredient.unit ?? 'g';
+          const key = `${name.toLowerCase()}|${unit}`;
+          const existing = items.get(key);
+          if (existing) {
+            existing.amount += ingredient.grams;
+          } else {
+            items.set(key, { name, amount: ingredient.grams, unit });
+          }
+        }
+      }
+    }
+  }
+
+  return { items: Array.from(items.values()), unquantified };
 }
 
 export function getRecentDays(today: string, count = 7): string[] {
@@ -552,6 +747,10 @@ export function createSeedState(): AppState {
     achievements: [],
     labs: [{ id: "baseline", label: "Baseline", date: "2026-08-10", values: DEFAULT_LAB_VALUES }],
     nutritionPlan: { status: "pending", prioritize: [], limit: [], targets: [], notes: "" },
+    plans: [],
+    planSlotCompletions: [],
+    planSupplementLogs: [],
+    shoppingListState: { bought: {} },
     intentions: [
       { id: "lunch-walk", ifText: "Termino de comer", thenText: "caminaré 5–10 minutos." },
       { id: "desk-break", ifText: "Llevo mucho tiempo en el escritorio", thenText: "me pondré de pie y me moveré." },
@@ -575,6 +774,17 @@ export function loadState(): AppState {
       labs: parsed.labs?.length ? parsed.labs : seed.labs,
       intentions: parsed.intentions?.length ? parsed.intentions : seed.intentions,
       nutritionPlan: { ...seed.nutritionPlan, ...(parsed.nutritionPlan ?? {}) },
+      plans: Array.isArray(parsed.plans) ? parsed.plans : seed.plans,
+      planSlotCompletions: Array.isArray(parsed.planSlotCompletions) ? parsed.planSlotCompletions : seed.planSlotCompletions,
+      planSupplementLogs: Array.isArray(parsed.planSupplementLogs) ? parsed.planSupplementLogs : seed.planSupplementLogs,
+      shoppingListState: {
+        ...seed.shoppingListState,
+        ...(parsed.shoppingListState ?? {}),
+        bought: {
+          ...seed.shoppingListState.bought,
+          ...(parsed.shoppingListState?.bought ?? {})
+        }
+      },
     } as AppState;
   } catch {
     return createSeedState();
