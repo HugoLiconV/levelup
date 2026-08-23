@@ -230,28 +230,7 @@ textarea { resize: vertical; }
 .guide-teaser h3 { margin: 3px 0; font-size: 14px; letter-spacing: -.02em; }
 .guide-teaser p:last-child { margin: 0; color: var(--ink-soft); font-size: 11px; }
 .guide-teaser .icon-button { flex: 0 0 auto; }
-.general-note { display: flex; gap: 10px; padding: 13px; border: 1px solid #e2e8e1; border-radius: 16px; color: var(--teal-dark); background: #eef6f0; }
-.general-note svg { flex: 0 0 auto; margin-top: 1px; }
-.general-note p { margin: 0; color: var(--ink-soft); font-size: 12px; }
 .food-guide { display: flex; flex-direction: column; gap: 13px; }
-.guide-columns { display: flex; flex-direction: column; gap: 13px; }
-.guide-block { padding: 17px; border-radius: 19px; }
-.prioritize { border: 1px solid #dce9dc; background: #eff8ef; }
-.limit { border: 1px solid #ebe5d7; background: #fcf9f0; }
-.guide-heading { display: flex; align-items: center; gap: 10px; }
-.guide-heading > span { display: grid; place-items: center; width: 28px; height: 28px; border-radius: 10px; color: var(--teal); background: #dceede; }
-.limit .guide-heading > span { color: var(--gold); background: var(--gold-soft); }
-.guide-heading h2 { margin: 2px 0 0; font-size: 18px; letter-spacing: -.04em; }
-.guide-block ul { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 9px 13px; margin: 17px 0 0; padding: 0; list-style: none; }
-.guide-block li { display: flex; align-items: flex-start; gap: 6px; color: var(--ink-soft); font-size: 12px; line-height: 1.35; }
-.guide-block li svg { flex: 0 0 auto; margin-top: 2px; color: var(--teal); }
-.limit li svg { color: var(--gold); }
-.nutritionist-card { display: flex; align-items: flex-start; gap: 11px; padding: 15px; border: 1px solid var(--line); border-radius: 18px; background: var(--surface); }
-.nutritionist-icon { display: grid; flex: 0 0 auto; place-items: center; width: 38px; height: 38px; border-radius: 13px; color: var(--teal); background: var(--mint); }
-.nutritionist-card > div:nth-child(2) { flex: 1; min-width: 0; }
-.nutritionist-card h3 { margin: 3px 0; font-size: 14px; }
-.nutritionist-card p:last-child { margin: 0; color: var(--ink-soft); font-size: 11px; }
-.nutritionist-card .secondary-button { flex: 0 0 auto; min-height: 35px; padding: 0 10px; font-size: 11px; }
 .plan-entry-teaser { display: flex; align-items: center; gap: 13px; padding: 15px; border: 1px solid #cfe2d6; border-radius: 18px; background: linear-gradient(145deg, #edf7f0, #f8f5e9); }
 .plan-entry-teaser > div { flex: 1; min-width: 0; }
 .plan-entry-teaser h3 { margin: 3px 0; font-size: 15px; }
@@ -276,12 +255,6 @@ textarea { resize: vertical; }
 .personal-plan { padding: 16px; border: 1px solid #cfe2d6; border-radius: 18px; background: #f2f9f3; }
 .personal-plan-head { display: flex; justify-content: space-between; align-items: flex-start; gap: 10px; }
 .personal-plan-head h2 { margin: 3px 0 0; font-size: 17px; letter-spacing: -.04em; }
-.personal-plan-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 13px; margin-top: 14px; }
-.personal-plan-grid > div:last-child:nth-child(odd) { grid-column: 1 / -1; }
-.personal-plan-grid strong { color: var(--teal-dark); font-size: 11px; }
-.personal-plan-grid ul { margin: 6px 0 0; padding-left: 15px; color: var(--ink-soft); font-size: 11px; }
-.personal-plan-grid li + li { margin-top: 3px; }
-.personal-notes { margin: 13px 0 0; padding-top: 10px; border-top: 1px solid #d8e8dd; color: var(--ink-soft); font-size: 11px; white-space: pre-wrap; }
 
 .move-focus-card { padding: 18px; border-radius: 23px; color: #fff; background: var(--teal); box-shadow: 0 15px 28px rgba(52, 121, 111, .15); }
 .move-card-top { display: flex; justify-content: space-between; align-items: center; }
@@ -429,12 +402,6 @@ textarea { resize: vertical; }
 .reminder-time input { padding: 5px; border: 1px solid var(--line); border-radius: 8px; background: var(--surface); font-size: 11px; }
 .notification-status { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 11px 13px; color: var(--ink-soft); font-size: 11px; background: #fbfcfa; }
 .notification-status .text-button { font-size: 11px; }
-.nutrition-setting { display: flex; align-items: flex-start; gap: 11px; padding: 15px; border: 1px solid #dfe8df; border-radius: 17px; background: #f1f8f1; }
-.setting-icon { display: grid; flex: 0 0 auto; place-items: center; width: 37px; height: 37px; border-radius: 12px; color: var(--teal); background: var(--mint); }
-.nutrition-setting > div:nth-child(2) { flex: 1; min-width: 0; }
-.nutrition-setting h3 { margin: 3px 0; font-size: 14px; }
-.nutrition-setting p:last-child { margin: 0; color: var(--ink-soft); font-size: 11px; }
-.nutrition-setting .text-button { flex: 0 0 auto; }
 .data-actions > button { display: flex; align-items: center; gap: 10px; min-height: 64px; padding: 11px 13px; border: 0; border-bottom: 1px solid var(--line); text-align: left; background: transparent; }
 .data-actions > button:last-child { border-bottom: 0; }
 .data-actions > button:hover { background: #f8fbf8; }
@@ -701,7 +668,6 @@ textarea { resize: vertical; }
 @media (max-width: 390px) {
   .app-main { padding-right: 15px; padding-left: 15px; }
   .focus-card { padding-right: 13px; padding-left: 13px; }
-  .guide-block ul { grid-template-columns: 1fr; }
   .review-momentum { flex-wrap: wrap; }
   .review-momentum > small { margin-left: 0; }
   .lab-table-head, .lab-row { grid-template-columns: minmax(73px, 1.35fr) .65fr .65fr minmax(54px, .9fr); padding-right: 8px; padding-left: 8px; }

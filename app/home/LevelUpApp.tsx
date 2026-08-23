@@ -5,8 +5,7 @@ import {
   ExerciseModal,
   IntentionModal,
   LabsModal,
-  MealModal,
-  NutritionModal
+  MealModal
 } from './modals';
 import { PlanEntryScreen } from './plan-entry';
 import {
@@ -62,13 +61,11 @@ export default function LevelUpApp() {
     openMeal,
     openExercise,
     openLabs,
-    openNutrition,
     openIntention,
     importData,
     addMeal,
     addExercise,
     saveLabs,
-    saveNutritionPlan,
     savePlan,
     saveIntention
   } = useLevelUpApp();
@@ -125,7 +122,6 @@ export default function LevelUpApp() {
             todayData={todayData}
             onOpenMeal={openMeal}
             onRepeatMeal={repeatRecentMeal}
-            onNutrition={openNutrition}
             onPlanEntry={openPlanEntry}
             onDeleteMeal={deleteMeal}
             onWater={logWater}
@@ -167,7 +163,6 @@ export default function LevelUpApp() {
             notificationPermission={notificationPermission}
             notificationSupported={notificationSupported}
             notificationBusy={notificationBusy}
-            onOpenNutrition={openNutrition}
             onEditIntention={openIntention}
             onExport={exportData}
             onImport={triggerImport}
@@ -197,13 +192,6 @@ export default function LevelUpApp() {
           baseline={state.labs.find(lab => lab.id === 'baseline')}
           onClose={() => setModal(null)}
           onSave={saveLabs}
-        />
-      )}
-      {modal?.type === 'nutrition' && (
-        <NutritionModal
-          plan={state.nutritionPlan}
-          onClose={() => setModal(null)}
-          onSave={saveNutritionPlan}
         />
       )}
       {modal?.type === 'intention' && (

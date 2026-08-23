@@ -6,7 +6,6 @@ import { InstallGuide } from '../components/InstallGuide';
 import {
   ACHIEVEMENT_META,
   ACHIEVEMENT_ORDER,
-  FOOD_GUIDE,
   LAB_METRICS,
   MEAL_TAGS,
   TOTAL_DAYS,
@@ -32,7 +31,6 @@ import {
   type ImplementationIntention,
   type LabCheckpoint,
   type Meal,
-  type NutritionPlan,
   type Plan,
   type QuestId
 } from '../lib/levelup';
@@ -558,7 +556,6 @@ export function FoodView({
   todayData,
   onOpenMeal,
   onRepeatMeal,
-  onNutrition,
   onPlanEntry,
   onDeleteMeal,
   onWater
@@ -568,7 +565,6 @@ export function FoodView({
   todayData: ReturnType<typeof getDayData>;
   onOpenMeal: () => void;
   onRepeatMeal: () => void;
-  onNutrition: () => void;
   onPlanEntry: () => void;
   onDeleteMeal: (mealId: string) => void;
   onWater: () => void;
@@ -697,8 +693,6 @@ export function FoodView({
         </>
       ) : (
         <FoodGuide
-          plan={state.nutritionPlan}
-          onNutrition={onNutrition}
           onPlanEntry={onPlanEntry}
           activePlan={getActivePlanForDate(state.plans, today)}
           today={today}
@@ -755,14 +749,10 @@ function MealRow({
 }
 
 function FoodGuide({
-  plan,
-  onNutrition,
   onPlanEntry,
   activePlan,
   today
 }: {
-  plan: NutritionPlan;
-  onNutrition: () => void;
   onPlanEntry: () => void;
   activePlan: Plan | null;
   today: string;
@@ -780,120 +770,6 @@ function FoodGuide({
         </div>
         <button className="primary-button" onClick={onPlanEntry}>Pegar menú</button>
       </div>
-      <div className="general-note">
-        <Icon name="info" size={18} />
-        <p>
-          Esto es orientación general, no un plan personalizado. Tu nutriólogo
-          puede ajustar lo que te funciona.
-        </p>
-      </div>
-      {plan.status === 'added' && (
-        <section className="personal-plan">
-          <div className="personal-plan-head">
-            <div>
-              <p className="eyebrow">TU PLAN PERSONAL</p>
-              <h2>Recomendaciones del nutriólogo</h2>
-            </div>
-            <button className="text-button" onClick={onNutrition}>
-              Editar <Icon name="edit" size={13} />
-            </button>
-          </div>
-          <div className="personal-plan-grid">
-            {plan.prioritize.length > 0 && (
-              <div>
-                <strong>Priorizar</strong>
-                <ul>
-                  {plan.prioritize.map(item => (
-                    <li key={item}>{item}</li>
-                  ))}
-                </ul>
-              </div>
-            )}
-            {plan.limit.length > 0 && (
-              <div>
-                <strong>Limitar o cuidar</strong>
-                <ul>
-                  {plan.limit.map(item => (
-                    <li key={item}>{item}</li>
-                  ))}
-                </ul>
-              </div>
-            )}
-            {plan.targets.length > 0 && (
-              <div>
-                <strong>Objetivos</strong>
-                <ul>
-                  {plan.targets.map(item => (
-                    <li key={item}>{item}</li>
-                  ))}
-                </ul>
-              </div>
-            )}
-          </div>
-          {plan.notes && <p className="personal-notes">{plan.notes}</p>}
-        </section>
-      )}
-      <div className="guide-columns">
-        <section className="guide-block prioritize">
-          <div className="guide-heading">
-            <span>
-              <Icon name="plus" size={15} />
-            </span>
-            <div>
-              <p className="eyebrow">PRIORIZA MÁS A MENUDO</p>
-              <h2>Más de esto</h2>
-            </div>
-          </div>
-          <ul>
-            {FOOD_GUIDE.prioritize.map(item => (
-              <li key={item}>
-                <Icon name="check" size={15} />
-                {item}
-              </li>
-            ))}
-          </ul>
-        </section>
-        <section className="guide-block limit">
-          <div className="guide-heading">
-            <span>
-              <Icon name="minus" size={15} />
-            </span>
-            <div>
-              <p className="eyebrow">TEN MENOS A MENUDO</p>
-              <h2>Sin prohibiciones</h2>
-            </div>
-          </div>
-          <ul>
-            {FOOD_GUIDE.limit.map(item => (
-              <li key={item}>
-                <Icon name="arrow" size={13} />
-                {item}
-              </li>
-            ))}
-          </ul>
-        </section>
-      </div>
-      <section className="nutritionist-card">
-        <div className="nutritionist-icon">
-          <Icon name="users" size={20} />
-        </div>
-        <div>
-          <p className="eyebrow">PLAN DE NUTRIÓLOGO</p>
-          <h3>
-            {plan.status === 'pending'
-              ? 'Aún no agregado'
-              : 'Plan personal agregado'}
-          </h3>
-          <p>
-            {plan.status === 'pending'
-              ? 'Cuando tengas tu cita, guarda aquí recomendaciones, objetivos y notas.'
-              : 'Puedes actualizar tus recomendaciones cuando quieras.'}
-          </p>
-        </div>
-        <button className="secondary-button" onClick={onNutrition}>
-          {plan.status === 'pending' ? 'Agregar plan' : 'Editar plan'}
-        </button>
-      </section>
     </div>
   );
 }
@@ -1691,7 +1567,6 @@ export function MoreView({
   notificationPermission,
   notificationSupported,
   notificationBusy,
-  onOpenNutrition,
   onEditIntention,
   onExport,
   onImport,
@@ -1706,7 +1581,6 @@ export function MoreView({
   notificationPermission: NotificationPermissionState;
   notificationSupported: boolean;
   notificationBusy: boolean;
-  onOpenNutrition: () => void;
   onEditIntention: (intention: ImplementationIntention) => void;
   onExport: () => void;
   onImport: () => void;
@@ -1925,27 +1799,6 @@ export function MoreView({
             )}
           </div>
         </div>
-      </section>
-      <section className="nutrition-setting">
-        <div className="setting-icon">
-          <Icon name="leaf" size={18} />
-        </div>
-        <div>
-          <p className="eyebrow">NUTRIÓLOGO</p>
-          <h3>
-            {state.nutritionPlan.status === 'pending'
-              ? 'Plan pendiente'
-              : 'Plan personal guardado'}
-          </h3>
-          <p>
-            {state.nutritionPlan.status === 'pending'
-              ? 'Agrega recomendaciones cuando tengas tu cita.'
-              : 'Tus recomendaciones están listas para consultar.'}
-          </p>
-        </div>
-        <button className="text-button" onClick={onOpenNutrition}>
-          {state.nutritionPlan.status === 'pending' ? 'Agregar' : 'Editar'}
-        </button>
       </section>
       <section>
         <div className="section-heading">

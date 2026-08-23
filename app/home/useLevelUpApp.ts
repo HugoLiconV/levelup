@@ -25,7 +25,6 @@ import {
   type ImplementationIntention,
   type LabCheckpoint,
   type Meal,
-  type NutritionPlan,
   type Plan,
   type QuestId
 } from '../lib/levelup';
@@ -274,21 +273,6 @@ export function useLevelUpApp() {
     setNotice
   });
 
-  const saveNutritionPlan = (plan: NutritionPlan) => {
-    apply(
-      previous => ({
-        ...previous,
-        nutritionPlan: {
-          ...plan,
-          status: 'added',
-          updatedAt: new Date().toISOString()
-        }
-      }),
-      'Tu plan de nutrición quedó guardado'
-    );
-    setModal(null);
-  };
-
   const savePlan = (plan: Omit<Plan, 'id'>) => {
     const savedPlan: Plan = {
       ...plan,
@@ -388,7 +372,6 @@ export function useLevelUpApp() {
     addMeal,
     addExercise,
     saveLabs,
-    saveNutritionPlan,
     savePlan,
     saveIntention,
     ...dataTransfer,
@@ -401,7 +384,6 @@ export function useLevelUpApp() {
       setModal({ type: 'exercise', preset }),
     openLabs: (checkpoint?: LabCheckpoint) =>
       setModal({ type: 'labs', checkpoint }),
-    openNutrition: () => setModal({ type: 'nutrition' }),
     openPlanEntry: () => setModal({ type: 'plan-entry' }),
     openIntention: (intention: ImplementationIntention) =>
       setModal({ type: 'intention', intention })

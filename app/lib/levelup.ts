@@ -244,15 +244,6 @@ export interface LabCheckpoint {
   values: LabValues;
 }
 
-export interface NutritionPlan {
-  status: "pending" | "added";
-  prioritize: string[];
-  limit: string[];
-  targets: string[];
-  notes: string;
-  updatedAt?: string;
-}
-
 export interface ImplementationIntention {
   id: string;
   ifText: string;
@@ -273,7 +264,6 @@ export interface AppState {
   reflections: WeeklyReflection[];
   achievements: Achievement[];
   labs: LabCheckpoint[];
-  nutritionPlan: NutritionPlan;
   intentions: ImplementationIntention[];
   plans: Plan[];
   planSlotCompletions: PlanSlotCompletion[];
@@ -303,31 +293,6 @@ export const LAB_METRICS: Array<{ id: LabMetric; label: string; shortLabel: stri
   { id: "sdLdl", label: "sd-LDL", shortLabel: "sd-LDL", unit: "" },
   { id: "totalCholesterol", label: "Colesterol total", shortLabel: "Total", unit: "mg/dL" },
 ];
-
-export const FOOD_GUIDE = {
-  prioritize: [
-    "Verduras",
-    "Frutas enteras",
-    "Frijoles, lentejas y otras legumbres",
-    "Avena y granos integrales",
-    "Pescado",
-    "Proteínas magras",
-    "Nueces y semillas",
-    "Aguacate",
-    "Aceite de oliva",
-    "Alimentos mínimamente procesados",
-  ],
-  limit: [
-    "Bebidas azucaradas",
-    "Alimentos altos en azúcar añadida",
-    "Postres en exceso",
-    "Carbohidratos muy refinados",
-    "Alimentos muy procesados",
-    "Carnes procesadas",
-    "Alimentos altos en grasa saturada",
-    "Alcohol en exceso",
-  ],
-};
 
 export const MEAL_TAGS: MealTag[] = [
   "Proteína",
@@ -748,7 +713,6 @@ export function createSeedState(): AppState {
     reflections: [],
     achievements: [],
     labs: [{ id: "baseline", label: "Baseline", date: "2026-08-10", values: DEFAULT_LAB_VALUES }],
-    nutritionPlan: { status: "pending", prioritize: [], limit: [], targets: [], notes: "" },
     plans: [],
     planSlotCompletions: [],
     planSupplementLogs: [],
@@ -775,7 +739,6 @@ export function loadState(): AppState {
       settings: { ...seed.settings, ...(parsed.settings ?? {}), questXp: { ...seed.settings.questXp, ...(parsed.settings?.questXp ?? {}) } },
       labs: parsed.labs?.length ? parsed.labs : seed.labs,
       intentions: parsed.intentions?.length ? parsed.intentions : seed.intentions,
-      nutritionPlan: { ...seed.nutritionPlan, ...(parsed.nutritionPlan ?? {}) },
       plans: Array.isArray(parsed.plans) ? parsed.plans : seed.plans,
       planSlotCompletions: Array.isArray(parsed.planSlotCompletions) ? parsed.planSlotCompletions : seed.planSlotCompletions,
       planSupplementLogs: Array.isArray(parsed.planSupplementLogs) ? parsed.planSupplementLogs : seed.planSupplementLogs,

@@ -11,8 +11,7 @@ import {
   type LabValues,
   type Meal,
   type MealTag,
-  type MealType,
-  type NutritionPlan
+  type MealType
 } from '../lib/levelup';
 import {
   classNames,
@@ -396,96 +395,6 @@ export function LabsModal({
           </button>
           <button type="submit" className="primary-button">
             Guardar valores
-          </button>
-        </div>
-      </form>
-    </Modal>
-  );
-}
-
-export function NutritionModal({
-  plan,
-  onClose,
-  onSave
-}: {
-  plan: NutritionPlan;
-  onClose: () => void;
-  onSave: (plan: NutritionPlan) => void;
-}) {
-  const [prioritize, setPrioritize] = useState(plan.prioritize.join('\n'));
-  const [limit, setLimit] = useState(plan.limit.join('\n'));
-  const [targets, setTargets] = useState(plan.targets.join('\n'));
-  const [notes, setNotes] = useState(plan.notes);
-  const submit = (event: FormEvent) => {
-    event.preventDefault();
-    const lines = (value: string) =>
-      value
-        .split('\n')
-        .map(line => line.trim())
-        .filter(Boolean);
-    onSave({
-      status: 'added',
-      prioritize: lines(prioritize),
-      limit: lines(limit),
-      targets: lines(targets),
-      notes
-    });
-  };
-  return (
-    <Modal
-      title="Plan de nutriólogo"
-      eyebrow="EDITABLE CUANDO LO NECESITES"
-      onClose={onClose}>
-      <form className="modal-form" onSubmit={submit}>
-        <p className="form-note">
-          Estas recomendaciones reemplazan o complementan la guía general.
-          Escríbelas como te las entregue tu nutriólogo.
-        </p>
-        <div className="field">
-          <label htmlFor="nutrition-prioritize">Priorizar más</label>
-          <textarea
-            id="nutrition-prioritize"
-            value={prioritize}
-            onChange={event => setPrioritize(event.target.value)}
-            placeholder="Una recomendación por línea"
-            rows={3}
-          />
-        </div>
-        <div className="field">
-          <label htmlFor="nutrition-limit">Limitar o cuidar</label>
-          <textarea
-            id="nutrition-limit"
-            value={limit}
-            onChange={event => setLimit(event.target.value)}
-            placeholder="Una recomendación por línea"
-            rows={3}
-          />
-        </div>
-        <div className="field">
-          <label htmlFor="nutrition-targets">Objetivos personales</label>
-          <textarea
-            id="nutrition-targets"
-            value={targets}
-            onChange={event => setTargets(event.target.value)}
-            placeholder="Ej. incluir verduras en comida y cena"
-            rows={3}
-          />
-        </div>
-        <div className="field">
-          <label htmlFor="nutrition-notes">Notas</label>
-          <textarea
-            id="nutrition-notes"
-            value={notes}
-            onChange={event => setNotes(event.target.value)}
-            rows={3}
-          />
-        </div>
-        <div className="modal-actions">
-          <button type="button" className="secondary-button" onClick={onClose}>
-            Cancelar
-          </button>
-          <button type="submit" className="primary-button">
-            Guardar plan
           </button>
         </div>
       </form>
