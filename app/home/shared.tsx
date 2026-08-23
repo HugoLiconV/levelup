@@ -14,6 +14,7 @@ export type ModalState =
   | { type: 'exercise'; preset?: { activity: ExerciseType; duration: number } }
   | { type: 'labs'; checkpoint?: import('../lib/levelup').LabCheckpoint }
   | { type: 'nutrition' }
+  | { type: 'plan-entry' }
   | {
       type: 'intention';
       intention: import('../lib/levelup').ImplementationIntention;

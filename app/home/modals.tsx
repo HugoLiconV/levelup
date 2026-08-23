@@ -22,16 +22,18 @@ import {
 } from './shared';
 import { useMealTagSuggestions } from './useMealTagSuggestions';
 
-function Modal({
+export function Modal({
   title,
   eyebrow,
   children,
-  onClose
+  onClose,
+  className
 }: {
   title: string;
   eyebrow?: string;
   children: ReactNode;
   onClose: () => void;
+  className?: string;
 }) {
   const [viewportRect, setViewportRect] = useState<{
     height: number;
@@ -77,7 +79,7 @@ function Modal({
         if (event.target === event.currentTarget) onClose();
       }}>
       <div
-        className="modal-panel"
+        className={classNames('modal-panel', className)}
         style={panelStyle}
         role="dialog"
         aria-modal="true"

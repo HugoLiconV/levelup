@@ -292,6 +292,31 @@ describe('weekly Shopping List aggregation', () => {
     });
   });
 
+  it('does not invent a unit when a numeric equivalent has no unit', () => {
+    const planWithMissingUnit: Plan = {
+      ...menuPlan,
+      dayTypes: menuPlan.dayTypes.map(dayType => ({
+        ...dayType,
+        slots: dayType.slots.map(slot => ({
+          ...slot,
+          dishes: slot.dishes.map((currentDish, index) =>
+            index === 0 && slot.id === 'a-breakfast'
+              ? {
+                  ...currentDish,
+                  ingredients: [...currentDish.ingredients, ingredient('Ingrediente ambiguo', '1 porción', 100, null)]
+                }
+              : currentDish
+          )
+        }))
+      }))
+    };
+
+    const shoppingList = getWeeklyShoppingList(planWithMissingUnit, '2026-08-10');
+
+    expect(shoppingList.items.some(item => item.name === 'Ingrediente ambiguo')).toBe(false);
+    expect(shoppingList.unquantified.filter(item => item.name === 'Ingrediente ambiguo')).toHaveLength(4);
+  });
+
   it('counts only the days where a Plan is active when a week crosses its date range', () => {
     const partialPlan: Plan = {
       ...menuPlan,

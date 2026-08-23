@@ -142,6 +142,8 @@ export interface Plan {
   supplements: PlanSupplement[];
 }
 
+export type PlanDraft = Pick<Plan, "dayTypes" | "supplements">;
+
 export interface PlanSlotCompletion {
   id: string;
   date: string;
@@ -503,7 +505,7 @@ export function getWeeklyShoppingList(plan: Plan, weekStart: string): WeeklyShop
       for (const dish of slot.dishes) {
         for (const ingredient of dish.ingredients) {
           const name = getShoppingIngredientName(ingredient.name);
-          if (ingredient.grams === null) {
+          if (ingredient.grams === null || ingredient.unit === null) {
             unquantified.push({
               name,
               quantityText: ingredient.quantityText,
@@ -515,7 +517,7 @@ export function getWeeklyShoppingList(plan: Plan, weekStart: string): WeeklyShop
             continue;
           }
 
-          const unit = ingredient.unit ?? 'g';
+          const unit = ingredient.unit;
           const key = `${name.toLowerCase()}|${unit}`;
           const existing = items.get(key);
           if (existing) {

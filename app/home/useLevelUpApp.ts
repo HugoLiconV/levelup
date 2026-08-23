@@ -26,6 +26,7 @@ import {
   type LabCheckpoint,
   type Meal,
   type NutritionPlan,
+  type Plan,
   type QuestId
 } from '../lib/levelup';
 import { getRequestedScreen, type ModalState, type Screen } from './shared';
@@ -288,6 +289,23 @@ export function useLevelUpApp() {
     setModal(null);
   };
 
+  const savePlan = (plan: Omit<Plan, 'id'>) => {
+    const savedPlan: Plan = {
+      ...plan,
+      id: createId('plan'),
+      dayTypes: plan.dayTypes.map(dayType => ({
+        ...dayType,
+        id: createId('day-type'),
+        slots: dayType.slots.map(slot => ({ ...slot, id: createId('slot') }))
+      }))
+    };
+    apply(
+      previous => ({ ...previous, plans: [...previous.plans, savedPlan] }),
+      'Nueva versión del plan guardada'
+    );
+    setModal(null);
+  };
+
   const saveIntention = (intention: ImplementationIntention) => {
     apply(
       previous => ({
@@ -371,6 +389,7 @@ export function useLevelUpApp() {
     addExercise,
     saveLabs,
     saveNutritionPlan,
+    savePlan,
     saveIntention,
     ...dataTransfer,
     updateSettings,
@@ -383,6 +402,7 @@ export function useLevelUpApp() {
     openLabs: (checkpoint?: LabCheckpoint) =>
       setModal({ type: 'labs', checkpoint }),
     openNutrition: () => setModal({ type: 'nutrition' }),
+    openPlanEntry: () => setModal({ type: 'plan-entry' }),
     openIntention: (intention: ImplementationIntention) =>
       setModal({ type: 'intention', intention })
   };

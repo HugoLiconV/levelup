@@ -17,6 +17,8 @@ import {
   getComparison,
   getDailyXp,
   getDayData,
+  getActivePlanForDate,
+  getDayTypeForDate,
   getJourneyStatus,
   getLevel,
   getMilestones,
@@ -31,6 +33,7 @@ import {
   type LabCheckpoint,
   type Meal,
   type NutritionPlan,
+  type Plan,
   type QuestId
 } from '../lib/levelup';
 import {
@@ -556,6 +559,7 @@ export function FoodView({
   onOpenMeal,
   onRepeatMeal,
   onNutrition,
+  onPlanEntry,
   onDeleteMeal,
   onWater
 }: {
@@ -565,6 +569,7 @@ export function FoodView({
   onOpenMeal: () => void;
   onRepeatMeal: () => void;
   onNutrition: () => void;
+  onPlanEntry: () => void;
   onDeleteMeal: (mealId: string) => void;
   onWater: () => void;
 }) {
@@ -691,7 +696,13 @@ export function FoodView({
           </section>
         </>
       ) : (
-        <FoodGuide plan={state.nutritionPlan} onNutrition={onNutrition} />
+        <FoodGuide
+          plan={state.nutritionPlan}
+          onNutrition={onNutrition}
+          onPlanEntry={onPlanEntry}
+          activePlan={getActivePlanForDate(state.plans, today)}
+          today={today}
+        />
       )}
     </div>
   );
@@ -745,13 +756,30 @@ function MealRow({
 
 function FoodGuide({
   plan,
-  onNutrition
+  onNutrition,
+  onPlanEntry,
+  activePlan,
+  today
 }: {
   plan: NutritionPlan;
   onNutrition: () => void;
+  onPlanEntry: () => void;
+  activePlan: Plan | null;
+  today: string;
 }) {
+  if (activePlan) {
+    return <ActivePlanSummary plan={activePlan} today={today} onPlanEntry={onPlanEntry} />;
+  }
   return (
     <div className="food-guide">
+      <div className="plan-entry-teaser">
+        <div>
+          <p className="eyebrow">MENÚ DE TU NUTRIÓLOGO</p>
+          <h3>¿Ya tienes un menú nuevo?</h3>
+          <p>Pégalo y revisa el borrador antes de guardarlo como una nueva versión.</p>
+        </div>
+        <button className="primary-button" onClick={onPlanEntry}>Pegar menú</button>
+      </div>
       <div className="general-note">
         <Icon name="info" size={18} />
         <p>
@@ -865,6 +893,52 @@ function FoodGuide({
         <button className="secondary-button" onClick={onNutrition}>
           {plan.status === 'pending' ? 'Agregar plan' : 'Editar plan'}
         </button>
+      </section>
+    </div>
+  );
+}
+
+function ActivePlanSummary({
+  plan,
+  today,
+  onPlanEntry
+}: {
+  plan: Plan;
+  today: string;
+  onPlanEntry: () => void;
+}) {
+  const todayDayType = getDayTypeForDate(plan, today);
+  const slotCount = plan.dayTypes.reduce((total, dayType) => total + dayType.slots.length, 0);
+  const dishCount = plan.dayTypes.reduce((total, dayType) => total + dayType.slots.reduce((slotTotal, slot) => slotTotal + slot.dishes.length, 0), 0);
+  return (
+    <div className="food-guide plan-summary">
+      <section className="personal-plan plan-summary-header">
+        <div className="personal-plan-head">
+          <div>
+            <p className="eyebrow">PLAN ACTIVO · {formatLongDate(plan.startDate)}</p>
+            <h2>Plan de tu nutriólogo</h2>
+          </div>
+          <button className="text-button" onClick={onPlanEntry}>Nuevo <Icon name="plus" size={13} /></button>
+        </div>
+        <p className="muted">Hoy corresponde: <strong>{todayDayType?.name ?? 'sin variante asignada'}</strong></p>
+      </section>
+      <div className="plan-save-success">
+        <span><Icon name="check" size={17} /></span>
+        <div>
+          <strong>Tu menú quedó guardado</strong>
+          <p>Está guardado en este dispositivo y listo para acompañarte cada día.</p>
+        </div>
+      </div>
+      <section className="plan-saved-stats">
+        <div><strong>{plan.dayTypes.length}</strong><span>tipos de día</span></div>
+        <div><strong>{slotCount}</strong><span>slots</span></div>
+        <div><strong>{dishCount}</strong><span>platillos</span></div>
+        <div><strong>{plan.supplements.length}</strong><span>suplementos</span></div>
+      </section>
+      <section className="plan-day-type-card">
+        <p className="eyebrow">PARA HOY</p>
+        <h3>{todayDayType?.name ?? 'Sin variante asignada'}</h3>
+        <p className="muted">Revisa y corrige cualquier detalle abriendo una nueva versión desde el botón “Nuevo”.</p>
       </section>
     </div>
   );

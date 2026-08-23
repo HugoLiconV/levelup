@@ -8,6 +8,7 @@ import {
   MealModal,
   NutritionModal
 } from './modals';
+import { PlanEntryScreen } from './plan-entry';
 import {
   BottomNav,
   FoodView,
@@ -47,6 +48,7 @@ export default function LevelUpApp() {
     logWater,
     repeatRecentMeal,
     deleteMeal,
+    openPlanEntry,
     updateSettings,
     toggleReminders,
     updateReminderTime,
@@ -67,6 +69,7 @@ export default function LevelUpApp() {
     addExercise,
     saveLabs,
     saveNutritionPlan,
+    savePlan,
     saveIntention
   } = useLevelUpApp();
 
@@ -84,9 +87,18 @@ export default function LevelUpApp() {
     );
   }
 
+  const planEntryOpen = modal?.type === 'plan-entry';
+
   return (
     <div className="app-shell">
-      <main className="app-main">
+      {planEntryOpen ? (
+        <PlanEntryScreen
+          onClose={() => setModal(null)}
+          onSave={savePlan}
+        />
+      ) : (
+        <>
+        <main className="app-main">
         {screen === 'today' && (
           <TodayView
             state={state}
@@ -114,6 +126,7 @@ export default function LevelUpApp() {
             onOpenMeal={openMeal}
             onRepeatMeal={repeatRecentMeal}
             onNutrition={openNutrition}
+            onPlanEntry={openPlanEntry}
             onDeleteMeal={deleteMeal}
             onWater={logWater}
           />
@@ -162,24 +175,7 @@ export default function LevelUpApp() {
             onSignOut={signOut}
           />
         )}
-      </main>
-
-      <input
-        ref={importRef}
-        className="visually-hidden"
-        type="file"
-        accept="application/json,.json"
-        onChange={event => importData?.(event.target.files?.[0])}
-      />
-      <BottomNav screen={screen} onNavigate={setScreen} />
-      {notice && (
-        <div className="toast" role="status">
-          <span className="toast-icon">
-            <Icon name="check" size={16} />
-          </span>
-          {notice}
-        </div>
-      )}
+        </main>
 
       {modal?.type === 'meal' && (
         <MealModal
@@ -216,6 +212,24 @@ export default function LevelUpApp() {
           onClose={() => setModal(null)}
           onSave={saveIntention}
         />
+      )}
+        <BottomNav screen={screen} onNavigate={setScreen} />
+        </>
+      )}
+      <input
+        ref={importRef}
+        className="visually-hidden"
+        type="file"
+        accept="application/json,.json"
+        onChange={event => importData?.(event.target.files?.[0])}
+      />
+      {!planEntryOpen && notice && (
+        <div className="toast" role="status">
+          <span className="toast-icon">
+            <Icon name="check" size={16} />
+          </span>
+          {notice}
+        </div>
       )}
     </div>
   );
