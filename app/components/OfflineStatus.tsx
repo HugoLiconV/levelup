@@ -10,11 +10,49 @@ export function OfflineStatus() {
   const [updateAvailable, setUpdateAvailable] = useState(false);
   const updateAcceptedRef = useRef(false);
   const registrationRef = useRef<ServiceWorkerRegistration | null>(null);
+  const developmentCleanupStartedRef = useRef(false);
 
   useEffect(() => {
+    const isDevelopment = process.env.NODE_ENV === "development";
     const updateConnection = () => setIsOffline(!navigator.onLine);
     const handleControllerChange = () => {
       if (updateAcceptedRef.current) window.location.reload();
+    };
+
+    const unregisterDevelopmentServiceWorker = async () => {
+      if (developmentCleanupStartedRef.current || !("serviceWorker" in navigator)) return;
+      developmentCleanupStartedRef.current = true;
+
+      try {
+        const registrations = await navigator.serviceWorker.getRegistrations();
+        const appRegistrations = registrations.filter((candidate) => (
+          [candidate.active, candidate.waiting, candidate.installing].some((worker) => {
+            if (!worker) return false;
+            try {
+              return new URL(worker.scriptURL).origin === window.location.origin
+                && new URL(worker.scriptURL).pathname === "/sw.js";
+            } catch {
+              return false;
+            }
+          })
+        ));
+        const unregistered = await Promise.all(appRegistrations.map((candidate) => candidate.unregister()));
+
+        if ("caches" in window) {
+          const cacheKeys = await caches.keys();
+          await Promise.all(
+            cacheKeys
+              .filter((key) => key.startsWith("levelup-"))
+              .map((key) => caches.delete(key)),
+          );
+        }
+
+        if (unregistered.some(Boolean) || navigator.serviceWorker.controller) {
+          window.location.reload();
+        }
+      } catch {
+        // Development remains usable even if the browser blocks cleanup.
+      }
     };
 
     updateConnection();
@@ -40,6 +78,10 @@ export function OfflineStatus() {
     };
 
     const register = async () => {
+      if (isDevelopment) {
+        await unregisterDevelopmentServiceWorker();
+        return;
+      }
       if (!("serviceWorker" in navigator)) return;
       try {
         registration = await navigator.serviceWorker.register("/sw.js", {

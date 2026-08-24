@@ -56,7 +56,8 @@ export function getNotificationPermission(): NotificationPermission | "unsupport
 }
 
 export function isPushSupported(): boolean {
-  return typeof window !== "undefined"
+  return process.env.NODE_ENV !== "development"
+    && typeof window !== "undefined"
     && "serviceWorker" in navigator
     && "PushManager" in window
     && "Notification" in window;

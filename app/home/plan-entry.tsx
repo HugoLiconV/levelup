@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState, type FormEvent } from 'react';
+import { useEffect, useRef, useState, type FormEvent } from 'react';
 import { Icon } from '../components/Icons';
 import {
   createId,
@@ -17,6 +17,11 @@ import {
   type Weekday
 } from '../lib/levelup';
 import { classNames } from './shared';
+import {
+  ConfirmFlowExitDialog,
+  FlowActionBar,
+  FlowTopBar
+} from './navigation';
 
 type PlanToSave = Omit<Plan, 'id'>;
 type ReviewStep = 'schedule' | 'meals' | 'supplements';
@@ -25,6 +30,8 @@ type DishSelection = {
   slotIndex: number;
   dishIndex: number;
 };
+
+const MIN_MENU_TEXT_LENGTH = 20;
 
 const weekdayOptions: Array<{ value: Weekday; label: string }> = [
   { value: 1, label: 'Lun' },
@@ -240,17 +247,83 @@ export function PlanEntryScreen({
   const [sourceOpen, setSourceOpen] = useState(false);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [furthestUnlockedStep, setFurthestUnlockedStep] = useState(0);
+  const [confirmExit, setConfirmExit] = useState(false);
+  const requestAbortRef = useRef<AbortController | null>(null);
+  const browserBackRef = useRef<() => void>(() => {});
+  const closingRef = useRef(false);
+  const flowHistoryActiveRef = useRef(false);
+  const stepIndex = reviewSteps.findIndex(item => item.id === reviewStep);
+  const hasUnsavedWork = rawText.trim().length > 0 || draft !== null;
+
+  const closeFlowHistory = () => {
+    closingRef.current = true;
+    requestAbortRef.current?.abort();
+    if (
+      flowHistoryActiveRef.current &&
+      window.history.state?.levelUpFlow === 'plan-entry'
+    ) {
+      flowHistoryActiveRef.current = false;
+      window.history.back();
+    }
+  };
+
+  const exitFlow = () => {
+    closeFlowHistory();
+    onClose();
+  };
+
+  const requestExit = () => {
+    if (hasUnsavedWork) setConfirmExit(true);
+    else exitFlow();
+  };
+
+  useEffect(() => {
+    const flowState = {
+      ...(window.history.state ?? {}),
+      levelUpFlow: 'plan-entry'
+    };
+    window.history.pushState(flowState, '');
+    flowHistoryActiveRef.current = true;
+
+    const onPopState = () => {
+      if (closingRef.current) return;
+      window.history.pushState(flowState, '');
+      flowHistoryActiveRef.current = true;
+      browserBackRef.current();
+    };
+    window.addEventListener('popstate', onPopState);
+    return () => window.removeEventListener('popstate', onPopState);
+  }, []);
+
+  useEffect(() => {
+    if (!hasUnsavedWork) return;
+    const onBeforeUnload = (event: BeforeUnloadEvent) => {
+      event.preventDefault();
+      event.returnValue = '';
+    };
+    window.addEventListener('beforeunload', onBeforeUnload);
+    return () => window.removeEventListener('beforeunload', onBeforeUnload);
+  }, [hasUnsavedWork]);
+
+  useEffect(() => () => requestAbortRef.current?.abort(), []);
 
   const parse = async (event: FormEvent) => {
     event.preventDefault();
-    if (rawText.trim().length < 20) return;
+    if (rawText.trim().length < MIN_MENU_TEXT_LENGTH) {
+      setError(`Pega al menos ${MIN_MENU_TEXT_LENGTH} caracteres para crear un borrador útil.`);
+      return;
+    }
     setBusy(true);
     setError(null);
+    const controller = new AbortController();
+    requestAbortRef.current = controller;
     try {
       const response = await fetch('/api/nutrition-plan', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ text: rawText.trim() })
+        body: JSON.stringify({ text: rawText.trim() }),
+        signal: controller.signal
       });
       const payload = await response.json() as { draft?: unknown; error?: unknown };
       if (!response.ok) {
@@ -263,11 +336,16 @@ export function PlanEntryScreen({
       setSelectedDish(null);
       setSourceOpen(false);
       setReviewStep('schedule');
+      setFurthestUnlockedStep(0);
       setStage('review');
     } catch (caught) {
+      if (caught instanceof DOMException && caught.name === 'AbortError') return;
       setError(caught instanceof Error ? caught.message : 'No pudimos interpretar el menú');
     } finally {
-      setBusy(false);
+      if (requestAbortRef.current === controller) {
+        requestAbortRef.current = null;
+        setBusy(false);
+      }
     }
   };
 
@@ -287,9 +365,11 @@ export function PlanEntryScreen({
     }
     setError(null);
     if (reviewStep === 'schedule') setReviewStep('meals');
+    if (reviewStep === 'schedule') setFurthestUnlockedStep(current => Math.max(current, 1));
     if (reviewStep === 'meals') {
       setSelectedDish(null);
       setReviewStep('supplements');
+      setFurthestUnlockedStep(2);
     }
   };
 
@@ -300,13 +380,51 @@ export function PlanEntryScreen({
       setError(validationError);
       return;
     }
-    onSave({
+    const plan = {
       startDate,
       endDate: endDate || null,
       dayTypes: draft.dayTypes,
       supplements: draft.supplements
-    });
+    };
+    closeFlowHistory();
+    onSave(plan);
   };
+
+  const invalidateLaterSteps = () => {
+    setFurthestUnlockedStep(current => Math.min(current, stepIndex));
+  };
+
+  const updateDraftState = (
+    update: (current: PlanDraft | null) => PlanDraft | null
+  ) => {
+    invalidateLaterSteps();
+    setDraft(update);
+  };
+
+  const goBackOneStep = () => {
+    if (busy) {
+      requestAbortRef.current?.abort();
+      requestAbortRef.current = null;
+      setBusy(false);
+      setError(null);
+      return;
+    }
+    if (stage === 'paste') {
+      requestExit();
+      return;
+    }
+    if (reviewStep === 'schedule') {
+      changeSource();
+      return;
+    }
+    setError(null);
+    setSelectedDish(null);
+    setReviewStep(reviewSteps[stepIndex - 1]?.id ?? 'schedule');
+  };
+
+  useEffect(() => {
+    browserBackRef.current = goBackOneStep;
+  });
 
   const selectedDayTypeIndex = draft
     ? Math.max(0, draft.dayTypes.findIndex(dayType => dayType.id === selectedDayTypeId))
@@ -315,12 +433,12 @@ export function PlanEntryScreen({
 
   const addDayType = () => {
     const dayType = emptyDayType();
-    setDraft(current => current ? { ...current, dayTypes: [...current.dayTypes, dayType] } : current);
+    updateDraftState(current => current ? { ...current, dayTypes: [...current.dayTypes, dayType] } : current);
     setSelectedDayTypeId(dayType.id);
   };
 
   const removeDayType = (dayTypeIndex: number) => {
-    setDraft(current => current ? {
+    updateDraftState(current => current ? {
       ...current,
       dayTypes: current.dayTypes.filter((_, index) => index !== dayTypeIndex)
     } : current);
@@ -328,7 +446,7 @@ export function PlanEntryScreen({
   };
 
   const updateSupplement = (index: number, update: (supplement: PlanSupplement) => PlanSupplement) => {
-    setDraft(current => current ? {
+    updateDraftState(current => current ? {
       ...current,
       supplements: current.supplements.map((supplement, supplementIndex) =>
         supplementIndex === index ? update(supplement) : supplement
@@ -336,75 +454,80 @@ export function PlanEntryScreen({
     } : current);
   };
 
-  const stepIndex = reviewSteps.findIndex(item => item.id === reviewStep);
   const stepMeta = reviewSteps[stepIndex] ?? reviewSteps[0];
+  const menuTextLength = rawText.trim().length;
+  const menuTextIsTooShort = menuTextLength > 0 && menuTextLength < MIN_MENU_TEXT_LENGTH;
+  const pasteSubmitDisabled = busy || menuTextLength < MIN_MENU_TEXT_LENGTH;
   const screenTitle = busy
-    ? 'Estamos ordenando tu menú'
+    ? 'Estamos creando tu borrador'
     : stage === 'paste'
-      ? 'Agregar menú'
+      ? 'Pega tu menú'
       : stepMeta.title;
   const screenEyebrow = busy
     ? 'UN MOMENTO'
     : stage === 'paste'
-      ? 'PÉGALO Y LO ORDENAMOS'
+      ? null
       : `REVISIÓN GUIADA · ${stepIndex + 1} DE ${reviewSteps.length}`;
 
   return (
-    <main className="plan-entry-screen" aria-labelledby="plan-entry-title">
+    <main className="plan-entry-screen" aria-labelledby="plan-entry-title" aria-busy={busy}>
       <div className="plan-entry-screen-shell">
-        <header className="plan-entry-screen-header">
-          <button
-            type="button"
-            className="plan-back-button"
-            aria-label="Volver a Comida"
-            onClick={onClose}>
-            <Icon name="arrow" size={18} className="plan-back-icon" />
-            <span>Volver</span>
-          </button>
-          <strong className="plan-entry-topbar-title">Agregar menú</strong>
-          <span className="plan-entry-topbar-spacer" aria-hidden="true" />
-        </header>
+        <FlowTopBar title="Agregar menú" onExit={requestExit} />
         <div className="plan-entry-screen-heading">
-          <p className="eyebrow">{screenEyebrow}</p>
-          <h1 id="plan-entry-title">{screenTitle}</h1>
-          <p>{busy ? 'Estamos identificando tus días, comidas, cantidades y suplementos.' : stage === 'paste' ? 'La IA prepara un borrador y tú decides qué se guarda.' : 'Avanza con calma. Puedes volver a cualquier paso antes de guardar.'}</p>
+          {screenEyebrow && <p className="eyebrow">{screenEyebrow}</p>}
+          <h1 id="plan-entry-title" tabIndex={-1}>{screenTitle}</h1>
+          <p id={stage === 'paste' ? 'plan-paste-form-description' : undefined}>{busy ? 'Estamos identificando tus días, comidas, cantidades y suplementos.' : stage === 'paste' ? 'La IA creará un borrador editable para que lo revises antes de guardarlo.' : 'Avanza con calma. Puedes volver a cualquier paso antes de guardar.'}</p>
         </div>
 
         {stage === 'paste' && busy ? (
           <InterpretationLoading />
         ) : stage === 'paste' ? (
-          <form className="plan-paste-form" onSubmit={parse}>
+          <form
+            className="plan-paste-form"
+            aria-labelledby="plan-entry-title"
+            aria-describedby={error ? 'plan-paste-form-description plan-paste-error' : 'plan-paste-form-description'}
+            aria-busy={busy}
+            onSubmit={parse}>
             <div className="plan-entry-body plan-paste-body">
-              <div className="plan-entry-welcome">
-                <span className="plan-entry-welcome-icon"><Icon name="sparkles" size={20} /></span>
-                <div>
-                  <h3>Pega tu menú y lo ordenamos contigo</h3>
-                  <p>La IA prepara un borrador. Tú revisas lo importante antes de guardar cualquier cosa.</p>
-                </div>
-              </div>
               <div className="field">
-                <label htmlFor="nutrition-plan-source">Menú completo</label>
+                <label htmlFor="nutrition-plan-source">Menú completo <small>(obligatorio)</small></label>
                 <textarea
                   id="nutrition-plan-source"
                   value={rawText}
                   onChange={event => setRawText(event.target.value)}
-                  placeholder="Pega aquí el texto tal como te lo entregó tu nutriólogo…"
+                  placeholder="Ej. Lunes — Desayuno: 2 huevos y 1 taza de avena…"
                   rows={13}
                   autoFocus
+                  required
+                  minLength={MIN_MENU_TEXT_LENGTH}
+                  aria-required="true"
+                  aria-invalid={menuTextIsTooShort || undefined}
+                  aria-errormessage={menuTextIsTooShort ? 'nutrition-plan-source-length' : undefined}
+                  aria-describedby="nutrition-plan-source-help nutrition-plan-source-length"
                 />
-                <small className="field-hint">No incluyas datos personales que no formen parte del menú.</small>
-                {rawText.trim().length > 0 && rawText.trim().length < 20 && (
-                  <small className="field-hint">Pega al menos 20 caracteres para obtener un borrador útil.</small>
-                )}
+                <small id="nutrition-plan-source-help" className="field-hint">Incluye días, horarios, alimentos y porciones; no incluyas datos personales.</small>
+                <small id="nutrition-plan-source-length" className="field-hint" aria-live="polite">
+                  {menuTextLength === 0
+                    ? `Pega al menos ${MIN_MENU_TEXT_LENGTH} caracteres para continuar.`
+                    : menuTextIsTooShort
+                      ? `Faltan ${MIN_MENU_TEXT_LENGTH - menuTextLength} caracteres para continuar.`
+                      : `${menuTextLength} caracteres`}
+                </small>
               </div>
-              {error && <p className="form-error" role="alert">{error}</p>}
+              {error && <p id="plan-paste-error" className="form-error" role="alert" aria-live="assertive" aria-atomic="true">{error}</p>}
             </div>
-            <div className="modal-actions plan-entry-actions">
-              <button type="button" className="secondary-button" onClick={onClose}>Cancelar</button>
-              <button type="submit" className="primary-button" disabled={rawText.trim().length < 20}>
-                <Icon name="sparkles" size={15} /> Interpretar menú
+            <FlowActionBar className="plan-entry-actions plan-paste-actions">
+              <button
+                type="submit"
+                className="primary-button plan-paste-submit"
+                disabled={pasteSubmitDisabled}
+                aria-disabled={pasteSubmitDisabled}
+                aria-busy={busy}
+                aria-describedby="nutrition-plan-source-length"
+                aria-label={busy ? 'Creando borrador' : 'Crear borrador'}>
+                <Icon name="sparkles" size={15} /> {busy ? 'Creando borrador…' : 'Crear borrador'}
               </button>
-            </div>
+            </FlowActionBar>
           </form>
         ) : draft ? (
           <form
@@ -422,8 +545,15 @@ export function PlanEntryScreen({
                   role="tab"
                   aria-selected={reviewStep === item.id}
                   aria-current={reviewStep === item.id ? 'step' : undefined}
-                  className={classNames('plan-step-button', reviewStep === item.id && 'selected', index < stepIndex && 'completed')}
-                  onClick={() => { setReviewStep(item.id); setError(null); setSelectedDish(null); }}>
+                  aria-disabled={index > furthestUnlockedStep || undefined}
+                  disabled={index > furthestUnlockedStep}
+                  className={classNames('plan-step-button', reviewStep === item.id && 'selected', index < furthestUnlockedStep && 'completed')}
+                  onClick={() => {
+                    if (index > furthestUnlockedStep) return;
+                    setReviewStep(item.id);
+                    setError(null);
+                    setSelectedDish(null);
+                  }}>
                   <span>{index + 1}</span>
                   {item.label}
                 </button>
@@ -454,9 +584,9 @@ export function PlanEntryScreen({
                   draft={draft}
                   startDate={startDate}
                   endDate={endDate}
-                  onStartDateChange={setStartDate}
-                  onEndDateChange={setEndDate}
-                  onDayTypeChange={(index, update) => setDraft(current => current ? updateDayType(current, index, update) : current)}
+                  onStartDateChange={value => { invalidateLaterSteps(); setStartDate(value); }}
+                  onEndDateChange={value => { invalidateLaterSteps(); setEndDate(value); }}
+                  onDayTypeChange={(index, update) => updateDraftState(current => current ? updateDayType(current, index, update) : current)}
                   onAddDayType={addDayType}
                   onRemoveDayType={removeDayType}
                 />
@@ -468,21 +598,21 @@ export function PlanEntryScreen({
                   selectedDayTypeIndex={selectedDayTypeIndex}
                   selectedDish={selectedDish}
                   onSelectDayType={setSelectedDayTypeId}
-                  onSlotChange={(slotIndex, update) => setDraft(current => current ? updateSlot(current, selectedDayTypeIndex, slotIndex, update) : current)}
+                  onSlotChange={(slotIndex, update) => updateDraftState(current => current ? updateSlot(current, selectedDayTypeIndex, slotIndex, update) : current)}
                   onSlotRemove={slotIndex => {
-                    setDraft(current => current ? updateDayType(current, selectedDayTypeIndex, dayType => ({ ...dayType, slots: dayType.slots.filter((_, index) => index !== slotIndex) })) : current);
+                    updateDraftState(current => current ? updateDayType(current, selectedDayTypeIndex, dayType => ({ ...dayType, slots: dayType.slots.filter((_, index) => index !== slotIndex) })) : current);
                     setSelectedDish(null);
                   }}
-                  onAddSlot={() => setDraft(current => current ? updateDayType(current, selectedDayTypeIndex, dayType => ({ ...dayType, slots: [...dayType.slots, emptySlot()] })) : current)}
-                  onDishChange={(slotIndex, dishIndex, update) => setDraft(current => current ? updateDish(current, selectedDayTypeIndex, slotIndex, dishIndex, update) : current)}
+                  onAddSlot={() => updateDraftState(current => current ? updateDayType(current, selectedDayTypeIndex, dayType => ({ ...dayType, slots: [...dayType.slots, emptySlot()] })) : current)}
+                  onDishChange={(slotIndex, dishIndex, update) => updateDraftState(current => current ? updateDish(current, selectedDayTypeIndex, slotIndex, dishIndex, update) : current)}
                   onDishRemove={(slotIndex, dishIndex) => {
-                    setDraft(current => current ? updateSlot(current, selectedDayTypeIndex, slotIndex, slot => ({ ...slot, dishes: slot.dishes.filter((_, index) => index !== dishIndex) })) : current);
+                    updateDraftState(current => current ? updateSlot(current, selectedDayTypeIndex, slotIndex, slot => ({ ...slot, dishes: slot.dishes.filter((_, index) => index !== dishIndex) })) : current);
                     setSelectedDish(null);
                   }}
-                  onAddDish={slotIndex => setDraft(current => current ? updateSlot(current, selectedDayTypeIndex, slotIndex, slot => ({ ...slot, dishes: [...slot.dishes, emptyDish()] })) : current)}
-                  onIngredientChange={(slotIndex, dishIndex, ingredientIndex, update) => setDraft(current => current ? updateIngredient(current, selectedDayTypeIndex, slotIndex, dishIndex, ingredientIndex, update) : current)}
-                  onIngredientRemove={(slotIndex, dishIndex, ingredientIndex) => setDraft(current => current ? updateDish(current, selectedDayTypeIndex, slotIndex, dishIndex, dish => ({ ...dish, ingredients: dish.ingredients.filter((_, index) => index !== ingredientIndex) })) : current)}
-                  onAddIngredient={(slotIndex, dishIndex) => setDraft(current => current ? updateDish(current, selectedDayTypeIndex, slotIndex, dishIndex, dish => ({ ...dish, ingredients: [...dish.ingredients, emptyIngredient()] })) : current)}
+                  onAddDish={slotIndex => updateDraftState(current => current ? updateSlot(current, selectedDayTypeIndex, slotIndex, slot => ({ ...slot, dishes: [...slot.dishes, emptyDish()] })) : current)}
+                  onIngredientChange={(slotIndex, dishIndex, ingredientIndex, update) => updateDraftState(current => current ? updateIngredient(current, selectedDayTypeIndex, slotIndex, dishIndex, ingredientIndex, update) : current)}
+                  onIngredientRemove={(slotIndex, dishIndex, ingredientIndex) => updateDraftState(current => current ? updateDish(current, selectedDayTypeIndex, slotIndex, dishIndex, dish => ({ ...dish, ingredients: dish.ingredients.filter((_, index) => index !== ingredientIndex) })) : current)}
+                  onAddIngredient={(slotIndex, dishIndex) => updateDraftState(current => current ? updateDish(current, selectedDayTypeIndex, slotIndex, dishIndex, dish => ({ ...dish, ingredients: [...dish.ingredients, emptyIngredient()] })) : current)}
                   onSelectDish={setSelectedDish}
                   onCloseDish={() => setSelectedDish(null)}
                 />
@@ -491,24 +621,30 @@ export function PlanEntryScreen({
                 <SupplementsStep
                   draft={draft}
                   onSupplementChange={updateSupplement}
-                  onAddSupplement={() => setDraft(current => current ? { ...current, supplements: [...current.supplements, emptySupplement()] } : current)}
-                  onRemoveSupplement={index => setDraft(current => current ? { ...current, supplements: current.supplements.filter((_, itemIndex) => itemIndex !== index) } : current)}
+                  onAddSupplement={() => updateDraftState(current => current ? { ...current, supplements: [...current.supplements, emptySupplement()] } : current)}
+                  onRemoveSupplement={index => updateDraftState(current => current ? { ...current, supplements: current.supplements.filter((_, itemIndex) => itemIndex !== index) } : current)}
                 />
               )}
               {error && <p className="form-error" role="alert">{error}</p>}
             </div>
-            <div className="modal-actions plan-entry-actions">
-              <button type="button" className="secondary-button" onClick={reviewStep === 'schedule' ? changeSource : () => { setError(null); setSelectedDish(null); setReviewStep(reviewSteps[stepIndex - 1]?.id ?? 'schedule'); }}>
+            <FlowActionBar className="plan-entry-actions">
+              <button type="button" className="secondary-button" onClick={goBackOneStep}>
                 {reviewStep === 'schedule' ? 'Cambiar texto' : 'Atrás'}
               </button>
               <button type="submit" className="primary-button">
                 {reviewStep === 'supplements' ? 'Guardar nueva versión' : 'Continuar'}
                 {reviewStep !== 'supplements' && <Icon name="arrow" size={15} />}
               </button>
-            </div>
+            </FlowActionBar>
           </form>
         ) : null}
       </div>
+      {confirmExit && (
+        <ConfirmFlowExitDialog
+          onContinue={() => setConfirmExit(false)}
+          onDiscard={exitFlow}
+        />
+      )}
     </main>
   );
 }
@@ -529,7 +665,7 @@ function InterpretationLoading() {
   }, [loadingSteps.length]);
 
   return (
-    <div className="plan-interpretation-loading" role="status" aria-live="polite">
+    <div className="plan-interpretation-loading" role="status" aria-live="polite" aria-atomic="true" aria-busy="true" aria-label="Creando un borrador editable del menú">
       <div className="plan-loading-orbit" aria-hidden="true">
         <span className="plan-loading-orbit-dot plan-loading-orbit-dot-one" />
         <span className="plan-loading-orbit-dot plan-loading-orbit-dot-two" />

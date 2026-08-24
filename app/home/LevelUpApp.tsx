@@ -8,8 +8,8 @@ import {
   MealModal
 } from './modals';
 import { PlanEntryScreen } from './plan-entry';
+import { MainTabBar, useMainTabNavigation } from './navigation';
 import {
-  BottomNav,
   FoodView,
   MoveView,
   MoreView,
@@ -70,6 +70,8 @@ export default function LevelUpApp() {
     saveIntention
   } = useLevelUpApp();
 
+  const { mainRef, navigate } = useMainTabNavigation(screen, setScreen);
+
   if (!ready) {
     return (
       <main className="loading-screen">
@@ -95,7 +97,7 @@ export default function LevelUpApp() {
         />
       ) : (
         <>
-        <main className="app-main">
+        <main ref={mainRef} className="app-main">
         {screen === 'today' && (
           <TodayView
             state={state}
@@ -112,7 +114,7 @@ export default function LevelUpApp() {
             onWater={logWater}
             onOpenMeal={openMeal}
             onOpenExercise={() => openExercise()}
-            onNavigate={setScreen}
+            onNavigate={navigate}
           />
         )}
         {screen === 'food' && (
@@ -201,7 +203,7 @@ export default function LevelUpApp() {
           onSave={saveIntention}
         />
       )}
-        <BottomNav screen={screen} onNavigate={setScreen} />
+        <MainTabBar screen={screen} onNavigate={navigate} />
         </>
       )}
       <input

@@ -41,7 +41,6 @@ import {
   getDaysUntilAppointment,
   getGreeting,
   exerciseTypes,
-  navItems,
   type NotificationPermissionState,
   type Screen
 } from './shared';
@@ -1944,28 +1943,5 @@ function EmptyState({
         {actionLabel}
       </button>
     </div>
-  );
-}
-
-export function BottomNav({
-  screen,
-  onNavigate
-}: {
-  screen: Screen;
-  onNavigate: (screen: Screen) => void;
-}) {
-  return (
-    <nav className="bottom-nav" aria-label="Navegación principal">
-      {navItems.map(item => (
-        <button
-          key={item.id}
-          className={classNames(screen === item.id && 'active')}
-          onClick={() => onNavigate(item.id)}
-          aria-current={screen === item.id ? 'page' : undefined}>
-          <Icon name={item.icon} size={21} />
-          <span>{item.label}</span>
-        </button>
-      ))}
-    </nav>
   );
 }
