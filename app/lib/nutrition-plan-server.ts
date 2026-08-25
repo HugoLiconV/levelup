@@ -12,6 +12,8 @@ import {
 
 export class NutritionPlanConfigurationError extends Error {}
 
+export class NutritionPlanCompletenessError extends Error {}
+
 const SYSTEM_PROMPT = `Eres un asistente que convierte el menú de un nutriólogo en un borrador estructurado para una app de seguimiento. El texto puede estar en español, tener abreviaturas, tablas copiadas o instrucciones incompletas.
 
 Extrae todos los day-types (variantes de días), sus weekdays usando la convención de JavaScript (domingo 0, lunes 1 ... sábado 6), referencias no rastreables, slots rastreables, platillos, ingredientes y suplementos.
@@ -25,6 +27,7 @@ Reglas importantes:
 - Agrupa todos los platillos que pertenecen a la misma comida bajo un solo slot. No repitas un slot con el mismo nombre para cada platillo.
 - Deriva solo las etiquetas claramente implicadas por el nombre, la descripción o los ingredientes del platillo. Usa exclusivamente esta lista: ${MEAL_TAGS.join(", ")}. Usa "Grasa insaturada" para aguacate, aceite de oliva, nueces o semillas; usa "Fruta" solo para fruta entera o en trozos, no para jugos.
 - Si el menú contiene una sola variante para todos los días, crea un solo day-type con weekdays [0,1,2,3,4,5,6]. Si menciona dos o más variantes, asígnales los weekdays indicados.
+- Si existe una sección dedicada de indicaciones de suplementos, úsala como la lista canónica: crea un suplemento por cada indicación de esa sección y no dupliques menciones previas junto a comidas o cenas.
 - No inventes ingredientes, cantidades, suplementos ni días que no estén en el texto. Si algo no está claro, consérvalo en el texto visible y deja el dato derivado en null.
 - Responde los nombres y textos en el idioma predominante del menú; si mezcla idiomas, conserva cada elemento en su idioma original.
 
@@ -123,7 +126,7 @@ function getOpenAiConfig(): { apiKey: string; model: string } {
   if (!apiKey) {
     throw new NutritionPlanConfigurationError("Las sugerencias de IA todavía no están configuradas en el servidor");
   }
-  const model = process.env.OPENAI_NUTRITION_PLAN_MODEL ?? "gpt-4.1-nano";
+  const model = process.env.OPENAI_NUTRITION_PLAN_MODEL ?? "gpt-5.6-luna";
   return { apiKey, model };
 }
 
@@ -345,6 +348,84 @@ function normalizeDraft(value: unknown, sourceText: string): PlanDraft {
   return { dayTypes, supplements };
 }
 
+const WEEKDAY_TOKENS = new Map<string, DayType["weekdays"][number]>([
+  ["domingo", 0],
+  ["lunes", 1],
+  ["martes", 2],
+  ["miercoles", 3],
+  ["jueves", 4],
+  ["viernes", 5],
+  ["sabado", 6],
+]);
+
+const TRACKABLE_MEAL_HEADINGS = new Set([
+  "desayuno",
+  "comida",
+  "cena",
+  "media tarde",
+  "colacion",
+  "snack",
+]);
+
+function weekdayKey(weekdays: number[]): string {
+  return Array.from(new Set(weekdays)).sort((a, b) => a - b).join(",");
+}
+
+function getSourceWeekdayGroups(sourceText: string): number[][] {
+  const groups = new Map<string, number[]>();
+  for (const line of sourceText.split(/\r?\n/)) {
+    const normalizedLine = normalizeSourceText(line);
+    const weekdays = Array.from(WEEKDAY_TOKENS.entries())
+      .filter(([token]) => new RegExp(`(?:^|[^a-z])${token}(?:$|[^a-z])`).test(normalizedLine))
+      .map(([, weekday]) => weekday);
+    if (weekdays.length < 2) continue;
+    groups.set(weekdayKey(weekdays), weekdays);
+  }
+  return Array.from(groups.values());
+}
+
+function countSourceMealHeadings(sourceText: string): number {
+  return sourceText.split(/\r?\n/).filter(line => {
+    const normalizedLine = normalizeSourceText(line).replace(/[.,]+$/g, "").trim();
+    return TRACKABLE_MEAL_HEADINGS.has(normalizedLine);
+  }).length;
+}
+
+function countCanonicalSupplements(sourceText: string): number | null {
+  const lines = sourceText.split(/\r?\n/);
+  const headingIndex = lines.findIndex(line =>
+    normalizeSourceText(line).replace(/[.,]+$/g, "").trim() === "indicaciones de suplementos"
+  );
+  if (headingIndex < 0) return null;
+
+  const instructionCount = lines.slice(headingIndex + 1).filter(line =>
+    /^\s*[-*•]\s*[^:]+:\s*\S/.test(line)
+  ).length;
+  return instructionCount > 0 ? instructionCount : null;
+}
+
+function validateDraftCompleteness(draft: PlanDraft, sourceText: string): void {
+  const expectedWeekdayGroups = getSourceWeekdayGroups(sourceText);
+  if (expectedWeekdayGroups.length >= 2) {
+    const actualWeekdayGroups = new Set(draft.dayTypes.map(dayType => weekdayKey(dayType.weekdays)));
+    const hasAllWeekdayGroups = expectedWeekdayGroups.every(group => actualWeekdayGroups.has(weekdayKey(group)));
+    if (!hasAllWeekdayGroups) {
+      throw new NutritionPlanCompletenessError("La IA omitió o combinó variantes de días del menú");
+    }
+  }
+
+  const expectedMealSlots = countSourceMealHeadings(sourceText);
+  const actualMealSlots = draft.dayTypes.reduce((total, dayType) => total + dayType.slots.length, 0);
+  if (expectedMealSlots >= 2 && actualMealSlots < expectedMealSlots) {
+    throw new NutritionPlanCompletenessError("La IA omitió una o más comidas del menú");
+  }
+
+  const expectedSupplements = countCanonicalSupplements(sourceText);
+  if (expectedSupplements !== null && draft.supplements.length !== expectedSupplements) {
+    throw new NutritionPlanCompletenessError("La IA omitió o duplicó indicaciones de suplementos");
+  }
+}
+
 export async function parseNutritionPlan(rawText: string): Promise<PlanDraft> {
   const { apiKey, model } = getOpenAiConfig();
   const response = await fetch("https://api.openai.com/v1/chat/completions", {
@@ -356,21 +437,32 @@ export async function parseNutritionPlan(rawText: string): Promise<PlanDraft> {
     body: JSON.stringify({
       model,
       messages: [
-        { role: "system", content: SYSTEM_PROMPT },
+        { role: "developer", content: SYSTEM_PROMPT },
         { role: "user", content: rawText },
       ],
       response_format: { type: "json_schema", json_schema: NUTRITION_PLAN_JSON_SCHEMA },
-      temperature: 0,
-      max_tokens: 8000,
+      reasoning_effort: "low",
+      max_completion_tokens: 12000,
     }),
-    signal: AbortSignal.timeout(30000),
+    signal: AbortSignal.timeout(45000),
   });
   if (!response.ok) {
     const detail = await response.text();
     throw new Error(`OpenAI request failed (${response.status}): ${detail.slice(0, 300)}`);
   }
-  const payload = await response.json() as { choices?: Array<{ message?: { content?: string } }> };
-  const content = payload.choices?.[0]?.message?.content;
+  const payload = await response.json() as {
+    choices?: Array<{
+      finish_reason?: string;
+      message?: { content?: string; refusal?: string };
+    }>;
+  };
+  const choice = payload.choices?.[0];
+  if (choice?.finish_reason === "length") {
+    throw new NutritionPlanCompletenessError("La respuesta de la IA alcanzó su límite antes de terminar el menú");
+  }
+  const content = choice?.message?.content;
   if (!content) throw new Error("La respuesta de OpenAI no incluyó un plan");
-  return normalizeDraft(JSON.parse(content), rawText);
+  const draft = normalizeDraft(JSON.parse(content), rawText);
+  validateDraftCompleteness(draft, rawText);
+  return draft;
 }

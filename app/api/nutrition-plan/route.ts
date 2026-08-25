@@ -1,4 +1,5 @@
 import {
+  NutritionPlanCompletenessError,
   NutritionPlanConfigurationError,
   parseNutritionPlan,
 } from "@/app/lib/nutrition-plan-server";
@@ -52,6 +53,12 @@ function errorResponse(error: unknown): Response {
 
   if (error instanceof NutritionPlanConfigurationError) {
     return Response.json({ error: error.message }, { status: 503 });
+  }
+
+  if (error instanceof NutritionPlanCompletenessError) {
+    return Response.json({
+      error: `${error.message}. Intenta analizarlo de nuevo`,
+    }, { status: 502 });
   }
 
   const upstreamStatus = getStatus(error);

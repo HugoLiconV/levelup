@@ -36,7 +36,7 @@ El usuario pega un menú libre en español. LevelUp usa OpenAI con salida JSON e
 
 El resultado pasa por una revisión guiada de calendario, comidas y suplementos. Cada campo se puede corregir antes de guardar. Si el modelo propone una equivalencia que no aparece en el texto fuente, LevelUp la descarta para no inventar cantidades.
 
-Modelo predeterminado: `gpt-4.1-nano`.
+Modelo predeterminado: `gpt-5.6-luna` con razonamiento bajo. LevelUp también valida que la IA conserve todas las variantes de días y secciones de comida antes de mostrar el borrador.
 
 ### 2. Clasificador de comidas
 

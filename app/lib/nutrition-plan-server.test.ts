@@ -1,5 +1,8 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
-import { parseNutritionPlan } from './nutrition-plan-server';
+import {
+  NutritionPlanCompletenessError,
+  parseNutritionPlan,
+} from './nutrition-plan-server';
 
 function modelResponse(ingredient: { name: string; quantityText: string; grams: number; unit: 'g' | 'ml' }) {
   return {
@@ -16,11 +19,11 @@ function modelResponse(ingredient: { name: string; quantityText: string; grams: 
   };
 }
 
-function mockOpenAiResponse(value: unknown) {
+function mockOpenAiResponse(value: unknown, finishReason = 'stop') {
   vi.stubEnv('OPENAI_API_KEY', 'test-key');
   vi.stubGlobal('fetch', vi.fn().mockResolvedValue(
     new Response(JSON.stringify({
-      choices: [{ message: { content: JSON.stringify(value) } }]
+      choices: [{ finish_reason: finishReason, message: { content: JSON.stringify(value) } }]
     }), { status: 200 })
   ));
 }
@@ -120,5 +123,98 @@ describe('nutrition plan equivalent validation', () => {
     expect(draft.dayTypes[0].slots[0].name).toBe('Desayuno');
     expect(draft.dayTypes[0].slots[0].dishes.map(dish => dish.name)).toEqual(['Jugo verde', 'Huevo']);
     expect(draft.dayTypes[0].slots[1].name).toBe('Comida');
+  });
+
+  it('uses GPT-5.6 Luna with low reasoning and the modern completion limit', async () => {
+    mockOpenAiResponse(modelResponse({
+      name: 'Pepino',
+      quantityText: '1 taza (180 g)',
+      grams: 180,
+      unit: 'g'
+    }));
+
+    await parseNutritionPlan('Lunes\nPepino: 1 taza (180 g)');
+
+    const fetchMock = vi.mocked(fetch);
+    const request = fetchMock.mock.calls[0]?.[1];
+    const body = JSON.parse(String(request?.body));
+    expect(body).toMatchObject({
+      model: 'gpt-5.6-luna',
+      reasoning_effort: 'low',
+      max_completion_tokens: 12000,
+    });
+    expect(body.temperature).toBeUndefined();
+    expect(body.messages[0].role).toBe('developer');
+  });
+
+  it('rejects a response that combines weekday variants from the source menu', async () => {
+    mockOpenAiResponse(modelResponse({
+      name: 'Pepino',
+      quantityText: '1 taza',
+      grams: 0,
+      unit: 'g'
+    }));
+
+    const source = [
+      'Lunes, Miércoles, Viernes, Domingo',
+      'Desayuno',
+      'Pepino: 1 taza',
+      'Martes, Jueves, Sábado',
+      'Desayuno',
+      'Champiñones: 1 taza',
+    ].join('\n');
+
+    await expect(parseNutritionPlan(source)).rejects.toBeInstanceOf(NutritionPlanCompletenessError);
+  });
+
+  it('rejects a response that omits meal sections from the source menu', async () => {
+    mockOpenAiResponse(modelResponse({
+      name: 'Pepino',
+      quantityText: '1 taza',
+      grams: 0,
+      unit: 'g'
+    }));
+
+    await expect(parseNutritionPlan([
+      'Lunes',
+      'Desayuno',
+      'Pepino: 1 taza',
+      'Comida',
+      'Pollo: 180 g',
+    ].join('\n'))).rejects.toBeInstanceOf(NutritionPlanCompletenessError);
+  });
+
+  it('rejects a provider response truncated by its completion limit', async () => {
+    mockOpenAiResponse(modelResponse({
+      name: 'Pepino',
+      quantityText: '1 taza',
+      grams: 0,
+      unit: 'g'
+    }), 'length');
+
+    await expect(parseNutritionPlan('Lunes\nPepino: 1 taza')).rejects.toBeInstanceOf(NutritionPlanCompletenessError);
+  });
+
+  it('rejects supplements duplicated outside the canonical instructions section', async () => {
+    const response = modelResponse({
+      name: 'Pepino',
+      quantityText: '1 taza',
+      grams: 0,
+      unit: 'g'
+    });
+    response.supplements = [
+      { name: 'OMEGA', doseText: '1 cucharada' },
+      { name: 'VIT E', doseText: '800 mg' },
+      { name: 'Omega 3 + VIT E', doseText: '' },
+    ];
+    mockOpenAiResponse(response);
+
+    await expect(parseNutritionPlan([
+      'Lunes',
+      'Pepino: 1 taza',
+      'Indicaciones de suplementos',
+      '- OMEGA: 1 cucharada',
+      '- VIT E: 800 mg',
+    ].join('\n'))).rejects.toBeInstanceOf(NutritionPlanCompletenessError);
   });
 });
