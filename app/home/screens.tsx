@@ -63,6 +63,7 @@ export function TodayView({
   onPartnerWalk,
   onWater,
   onOpenMeal,
+  onPlanEntry,
   onOpenExercise,
   onNavigate
 }: {
@@ -78,6 +79,7 @@ export function TodayView({
   onPartnerWalk: () => void;
   onWater: () => void;
   onOpenMeal: () => void;
+  onPlanEntry: () => void;
   onOpenExercise: () => void;
   onNavigate: (screen: Screen) => void;
 }) {
@@ -85,7 +87,8 @@ export function TodayView({
   const movementComplete =
     todayData.movementBreaks.length >= state.settings.dailyMovementGoal;
   const supplementComplete = todayData.supplementTaken;
-  const hasSupplementQuest = Boolean(getActivePlanForDate(state.plans, today)?.supplements.length);
+  const activePlan = getActivePlanForDate(state.plans, today);
+  const hasSupplementQuest = Boolean(activePlan?.supplements.length);
   const exerciseComplete = todayData.exercises.length > 0;
   const mealsComplete = todayData.mainMeals.length >= 3;
   const vegetablesComplete = todayData.vegetableMeals.length >= 2;
@@ -141,6 +144,31 @@ export function TodayView({
           <span>/ {TOTAL_DAYS}</span>
         </div>
       </section>
+
+      {!activePlan && (
+        <section className="ai-plan-launchpad" aria-labelledby="ai-plan-launch-title">
+          <div className="ai-plan-launch-meta">
+            <span className="ai-plan-launch-badge">
+              <Icon name="sparkles" size={13} /> Plan con IA
+            </span>
+            <span className="ai-plan-launch-review">
+              <Icon name="checkCircle" size={13} /> Borrador editable
+            </span>
+          </div>
+          <div className="ai-plan-launch-copy">
+            <h2 id="ai-plan-launch-title">Convierte tu menú en un plan diario</h2>
+            <p>
+              Pega las indicaciones de tu nutriólogo. La IA identifica días,
+              comidas, cantidades y suplementos; tú revisas todo antes de
+              guardarlo.
+            </p>
+          </div>
+          <button className="primary-button ai-plan-launch-action" onClick={onPlanEntry}>
+            Crear mi plan con IA <Icon name="arrow" size={15} />
+          </button>
+          <small>No genera una dieta: organiza el plan que ya recibiste.</small>
+        </section>
+      )}
 
       <CheckpointStrip state={state} today={today} journeyDay={journeyDay} />
 
@@ -266,7 +294,7 @@ export function TodayView({
           </span>
         </div>
         <div className="quest-list">
-          {getActivePlanForDate(state.plans, today)?.supplements.length ? (
+          {activePlan?.supplements.length ? (
             <QuestRow
               icon="sun"
               title="Suplementos del plan"

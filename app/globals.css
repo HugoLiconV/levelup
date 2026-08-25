@@ -121,6 +121,18 @@ textarea { resize: vertical; }
 .day-orb strong { font-size: 25px; line-height: 1; letter-spacing: -.06em; }
 .day-orb span { margin-top: 4px; color: var(--teal); font-size: 10px; font-weight: 700; }
 
+.ai-plan-launchpad { position: relative; display: flex; overflow: hidden; flex-direction: column; gap: 15px; padding: 20px; border: 1px solid #c9dfd2; border-radius: 23px; background: linear-gradient(145deg, #eaf6ef 0%, #f8f8ee 100%); box-shadow: 0 14px 28px rgba(52, 121, 111, .09); }
+.ai-plan-launchpad::after { position: absolute; right: -38px; bottom: -62px; width: 150px; height: 150px; border: 24px solid rgba(255,255,255,.38); border-radius: 50%; content: ""; pointer-events: none; }
+.ai-plan-launch-meta { position: relative; z-index: 1; display: flex; align-items: center; justify-content: space-between; gap: 10px; }
+.ai-plan-launch-badge, .ai-plan-launch-review { display: inline-flex; align-items: center; gap: 5px; font-size: 9px; font-weight: 800; letter-spacing: .1em; text-transform: uppercase; }
+.ai-plan-launch-badge { padding: 6px 9px; border-radius: 99px; color: #fff; background: var(--teal); }
+.ai-plan-launch-review { color: var(--teal-dark); }
+.ai-plan-launch-copy { position: relative; z-index: 1; max-width: 470px; }
+.ai-plan-launch-copy h2 { max-width: 390px; margin: 0; color: var(--ink); font-size: clamp(22px, 6vw, 28px); line-height: 1.07; letter-spacing: -.05em; }
+.ai-plan-launch-copy p { max-width: 445px; margin: 9px 0 0; color: var(--ink-soft); font-size: 13px; line-height: 1.5; }
+.ai-plan-launch-action { position: relative; z-index: 1; align-self: flex-start; min-height: 46px; padding-right: 17px; padding-left: 17px; }
+.ai-plan-launchpad > small { position: relative; z-index: 1; margin-top: -5px; color: var(--ink-faint); font-size: 10px; }
+
 .checkpoint-strip { display: flex; flex-direction: column; gap: 9px; padding: 16px 17px 14px; border: 1px solid var(--line); border-radius: 19px; background: rgba(255, 253, 249, .68); }
 .checkpoint-labels, .journey-summary { display: flex; justify-content: space-between; gap: 10px; color: var(--ink-faint); font-size: 10px; font-weight: 760; letter-spacing: .08em; }
 .checkpoint-labels b { margin-left: 4px; color: var(--ink-soft); font-weight: 600; letter-spacing: 0; }
@@ -789,6 +801,9 @@ textarea { resize: vertical; }
 
 @media (max-width: 390px) {
   .app-main { padding-right: 15px; padding-left: 15px; }
+  .ai-plan-launchpad { padding: 17px; }
+  .ai-plan-launch-meta { align-items: flex-start; flex-direction: column; gap: 8px; }
+  .ai-plan-launch-action { width: 100%; }
   .focus-card { padding-right: 13px; padding-left: 13px; }
   .review-momentum { flex-wrap: wrap; }
   .review-momentum > small { margin-left: 0; }

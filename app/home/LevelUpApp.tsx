@@ -113,6 +113,7 @@ export default function LevelUpApp() {
             onPartnerWalk={logPartnerWalk}
             onWater={logWater}
             onOpenMeal={openMeal}
+            onPlanEntry={openPlanEntry}
             onOpenExercise={() => openExercise()}
             onNavigate={navigate}
           />
