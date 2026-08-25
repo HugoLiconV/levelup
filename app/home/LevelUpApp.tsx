@@ -49,6 +49,8 @@ export default function LevelUpApp() {
     deleteMeal,
     togglePlanSlot,
     togglePlanSupplement,
+    toggleShoppingItem,
+    clearShoppingList,
     openPlanEntry,
     updateSettings,
     toggleReminders,
@@ -135,6 +137,8 @@ export default function LevelUpApp() {
             onDeleteMeal={deleteMeal}
             onTogglePlanSlot={togglePlanSlot}
             onTogglePlanSupplement={togglePlanSupplement}
+            onToggleShoppingItem={toggleShoppingItem}
+            onClearShoppingList={clearShoppingList}
             onWater={logWater}
           />
         )}

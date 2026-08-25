@@ -25,6 +25,7 @@ import {
   getMilestones,
   getMomentum,
   getWeeklyInsight,
+  getWeekStart,
   getWeeklyStats,
   isExerciseDay,
   type AppSettings,
@@ -49,6 +50,7 @@ import {
   type Screen
 } from './shared';
 import { ActivePlanView } from './food-guide';
+import { WeeklyShoppingList } from './food-guide/shopping-list';
 import { PlanSlotChecklist } from './plan-slot-checklist';
 import { PlanSupplementChecklist } from './plan-supplement-checklist';
 
@@ -603,6 +605,8 @@ export function FoodView({
   onDeleteMeal,
   onTogglePlanSlot,
   onTogglePlanSupplement,
+  onToggleShoppingItem,
+  onClearShoppingList,
   onWater
 }: {
   state: AppState;
@@ -618,9 +622,11 @@ export function FoodView({
     slot: PlanSlot
   ) => void;
   onTogglePlanSupplement: (planId: string, supplement: PlanSupplement) => void;
+  onToggleShoppingItem: (key: string) => void;
+  onClearShoppingList: () => void;
   onWater: () => void;
 }) {
-  const [tab, setTab] = useState<'registro' | 'guia'>('registro');
+  const [tab, setTab] = useState<'registro' | 'guia' | 'compras'>('registro');
   const activePlan = getActivePlanForDate(state.plans, today);
   const activeDayType = activePlan
     ? getDayTypeForDate(activePlan, today)
@@ -660,7 +666,7 @@ export function FoodView({
         title="Comer con intención"
         subtitle="Registra lo suficiente para notar tus patrones."
       />
-      <div className="segmented-control">
+      <div className="segmented-control food-section-tabs">
         <button
           className={classNames(tab === 'registro' && 'selected')}
           onClick={() => setTab('registro')}>
@@ -670,6 +676,11 @@ export function FoodView({
           className={classNames(tab === 'guia' && 'selected')}
           onClick={() => setTab('guia')}>
           Guía de comida
+        </button>
+        <button
+          className={classNames(tab === 'compras' && 'selected')}
+          onClick={() => setTab('compras')}>
+          Compras
         </button>
       </div>
       {tab === 'registro' ? (
@@ -760,11 +771,20 @@ export function FoodView({
             </button>
           )}
         </>
-      ) : (
+      ) : tab === 'guia' ? (
         <FoodGuide
           onPlanEntry={onPlanEntry}
           activePlan={activePlan}
           today={today}
+        />
+      ) : (
+        <WeeklyShoppingList
+          plan={activePlan}
+          weekStart={getWeekStart(today)}
+          bought={state.shoppingListState.bought}
+          onToggle={onToggleShoppingItem}
+          onClear={onClearShoppingList}
+          onPlanEntry={onPlanEntry}
         />
       )}
     </div>

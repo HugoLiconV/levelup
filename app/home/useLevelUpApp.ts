@@ -316,6 +316,22 @@ export function useLevelUpApp() {
     }, existing ? `${supplement.name} desmarcado` : `✓ ${supplement.name} registrado · +${state.settings.questXp.omega} XP`);
   };
 
+  const toggleShoppingItem = (key: string) => {
+    apply(previous => {
+      const bought = { ...previous.shoppingListState.bought };
+      if (bought[key]) delete bought[key];
+      else bought[key] = true;
+      return { ...previous, shoppingListState: { bought } };
+    });
+  };
+
+  const clearShoppingList = () => {
+    apply(
+      previous => ({ ...previous, shoppingListState: { bought: {} } }),
+      'Lista de compras reiniciada'
+    );
+  };
+
   const addExercise = (exercise: {
     activity: ExerciseType;
     duration: number;
@@ -467,6 +483,8 @@ export function useLevelUpApp() {
     deleteMeal,
     togglePlanSlot,
     togglePlanSupplement,
+    toggleShoppingItem,
+    clearShoppingList,
     addMeal,
     addExercise,
     saveLabs,
