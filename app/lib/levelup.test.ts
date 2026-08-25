@@ -1,6 +1,9 @@
 import { describe, expect, it } from 'vitest';
 import {
+  createSeedState,
   deriveMealFromPlanSlot,
+  getDailyXp,
+  getDayData,
   getActivePlanForDate,
   getDayTypeForDate,
   getWeeklyShoppingList,
@@ -225,6 +228,28 @@ describe('Plan Slot to Meal derivation', () => {
       description: 'Fruta con yogur, Nueces',
       tags: ['Fruta', 'Lácteos', 'Nueces y semillas']
     });
+  });
+});
+
+describe('Plan supplement tracking', () => {
+  it('treats any per-supplement log as the omega quest completion', () => {
+    const state = {
+      ...createSeedState(),
+      plans: [menuPlan],
+      planSupplementLogs: [
+        {
+          id: 'supplement-log',
+          date: '2026-08-10',
+          planId: menuPlan.id,
+          supplementName: 'Vit E 800 mg',
+          createdAt: '2026-08-10T08:00:00.000Z'
+        }
+      ]
+    };
+
+    expect(getDayData(state, '2026-08-10').supplementTaken).toBe(true);
+    expect(getDailyXp(state, '2026-08-10')).toBe(state.settings.questXp.omega);
+    expect(getDayData(state, '2026-08-11').supplementTaken).toBe(false);
   });
 });
 

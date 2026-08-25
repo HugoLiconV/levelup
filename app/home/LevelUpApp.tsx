@@ -42,12 +42,12 @@ export default function LevelUpApp() {
     totalXp,
     level,
     logMovementBreak,
-    logOmega,
     logPartnerWalk,
     logWater,
     repeatRecentMeal,
     deleteMeal,
     togglePlanSlot,
+    togglePlanSupplement,
     openPlanEntry,
     updateSettings,
     toggleReminders,
@@ -110,7 +110,6 @@ export default function LevelUpApp() {
             momentum={momentum}
             totalXp={totalXp}
             onMove={logMovementBreak}
-            onOmega={logOmega}
             onPartnerWalk={logPartnerWalk}
             onWater={logWater}
             onOpenMeal={openMeal}
@@ -128,6 +127,7 @@ export default function LevelUpApp() {
             onPlanEntry={openPlanEntry}
             onDeleteMeal={deleteMeal}
             onTogglePlanSlot={togglePlanSlot}
+            onTogglePlanSupplement={togglePlanSupplement}
             onWater={logWater}
           />
         )}

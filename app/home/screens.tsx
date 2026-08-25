@@ -33,6 +33,7 @@ import {
   type Meal,
   type Plan,
   type PlanSlot,
+  type PlanSupplement,
   type QuestId
 } from '../lib/levelup';
 import {
@@ -47,6 +48,7 @@ import {
 } from './shared';
 import { ActivePlanView } from './food-guide';
 import { PlanSlotChecklist } from './plan-slot-checklist';
+import { PlanSupplementChecklist } from './plan-supplement-checklist';
 
 export function TodayView({
   state,
@@ -58,7 +60,6 @@ export function TodayView({
   momentum,
   totalXp,
   onMove,
-  onOmega,
   onPartnerWalk,
   onWater,
   onOpenMeal,
@@ -74,7 +75,6 @@ export function TodayView({
   momentum: ReturnType<typeof getMomentum>;
   totalXp: number;
   onMove: () => void;
-  onOmega: () => void;
   onPartnerWalk: () => void;
   onWater: () => void;
   onOpenMeal: () => void;
@@ -84,7 +84,8 @@ export function TodayView({
   const dayXp = getDailyXp(state, today);
   const movementComplete =
     todayData.movementBreaks.length >= state.settings.dailyMovementGoal;
-  const omegaComplete = todayData.supplementTaken;
+  const supplementComplete = todayData.supplementTaken;
+  const hasSupplementQuest = Boolean(getActivePlanForDate(state.plans, today)?.supplements.length);
   const exerciseComplete = todayData.exercises.length > 0;
   const mealsComplete = todayData.mainMeals.length >= 3;
   const vegetablesComplete = todayData.vegetableMeals.length >= 2;
@@ -172,8 +173,9 @@ export function TodayView({
         </div>
       )}
       {journeyStatus === 'active' &&
+        hasSupplementQuest &&
         state.settings.reminderEnabled &&
-        !omegaComplete &&
+        !supplementComplete &&
         new Date().toTimeString().slice(0, 5) >=
           state.settings.reminderTime && (
           <div className="soft-banner reminder-banner">
@@ -181,11 +183,11 @@ export function TodayView({
             <div>
               <strong>Recordatorio suave</strong>
               <span>
-                Es un buen momento para tu {state.settings.supplementName}.
+                Revisa los suplementos de tu plan de hoy.
               </span>
             </div>
-            <button className="text-button" onClick={onOmega}>
-              Registrar
+            <button className="text-button" onClick={() => onNavigate('food')}>
+              Ver registro
             </button>
           </div>
         )}
@@ -252,7 +254,7 @@ export function TodayView({
           <span className="quiet-count">
             {
               [
-                omegaComplete,
+                ...(hasSupplementQuest ? [supplementComplete] : []),
                 movementComplete,
                 mealsComplete,
                 vegetablesComplete,
@@ -260,18 +262,20 @@ export function TodayView({
                 ...(scheduledExercise ? [exerciseComplete] : [])
               ].filter(Boolean).length
             }{' '}
-            / {scheduledExercise ? 6 : 5}
+            / {5 + (scheduledExercise ? 1 : 0) + (hasSupplementQuest ? 1 : 0)}
           </span>
         </div>
         <div className="quest-list">
-          <QuestRow
-            icon="sun"
-            title={state.settings.supplementName}
-            description={state.settings.supplementDose}
-            reward={state.settings.questXp.omega}
-            completed={omegaComplete}
-            onClick={onOmega}
-          />
+          {getActivePlanForDate(state.plans, today)?.supplements.length ? (
+            <QuestRow
+              icon="sun"
+              title="Suplementos del plan"
+              description="Registra cada suplemento en Comida"
+              reward={state.settings.questXp.omega}
+              completed={supplementComplete}
+              onClick={() => onNavigate('food')}
+            />
+          ) : null}
           <QuestRow
             icon="footprints"
             title="Pausas de movimiento"
@@ -561,6 +565,7 @@ export function FoodView({
   onPlanEntry,
   onDeleteMeal,
   onTogglePlanSlot,
+  onTogglePlanSupplement,
   onWater
 }: {
   state: AppState;
@@ -575,6 +580,7 @@ export function FoodView({
     dayTypeId: string,
     slot: PlanSlot
   ) => void;
+  onTogglePlanSupplement: (planId: string, supplement: PlanSupplement) => void;
   onWater: () => void;
 }) {
   const [tab, setTab] = useState<'registro' | 'guia'>('registro');
@@ -593,6 +599,13 @@ export function FoodView({
               completion.dayTypeId === activeDayType.id
           )
           .map(completion => completion.slotId)
+      : []
+  );
+  const completedSupplementNames = new Set(
+    activePlan
+      ? state.planSupplementLogs
+          .filter(log => log.date === today && log.planId === activePlan.id)
+          .map(log => log.supplementName)
       : []
   );
   const recentMeal = [...state.meals].sort((a, b) =>
@@ -655,6 +668,14 @@ export function FoodView({
                 onTogglePlanSlot(activePlan.id, activeDayType.id, slot)
               }
               onOpenMeal={onOpenMeal}
+            />
+          )}
+          {activePlan && activePlan.supplements.length > 0 && (
+            <PlanSupplementChecklist
+              planId={activePlan.id}
+              supplements={activePlan.supplements}
+              completedNames={completedSupplementNames}
+              onToggle={supplement => onTogglePlanSupplement(activePlan.id, supplement)}
             />
           )}
 
@@ -1149,8 +1170,8 @@ export function ProgressView({
           />
           <ReviewStat
             icon="sun"
-            label="Omega-3"
-            value={`${weeklyStats.omegaDays} / 7`}
+            label="Suplementos"
+            value={`${weeklyStats.supplementDays} / 7`}
           />
           <ReviewStat
             icon="utensils"
@@ -1700,26 +1721,12 @@ export function MoreView({
               <em>mL</em>
             </span>
           </label>
-          <label className="setting-row">
-            <span>
-              <strong>{state.settings.supplementName}</strong>
-              <small>Texto de tu hábito</small>
-            </span>
-            <input
-              className="setting-text-input"
-              type="text"
-              value={state.settings.supplementDose}
-              onChange={event =>
-                onSettingsChange({ supplementDose: event.target.value })
-              }
-            />
-          </label>
           <div className="setting-row reminder-setting">
             <span>
               <strong>Recordatorios</strong>
               <small>
                 {notificationSupported
-                  ? 'Omega-3 y pausas aunque cierres la app'
+                  ? 'Suplementos del plan y pausas aunque cierres la app'
                   : 'Este navegador no permite notificaciones push'}
               </small>
             </span>
@@ -1736,7 +1743,7 @@ export function MoreView({
           </div>
           {state.settings.reminderEnabled && (
             <label className="reminder-time">
-              <span>Hora de omega-3</span>
+              <span>Hora de recordatorios</span>
               <input
                 type="time"
                 value={state.settings.reminderTime}
@@ -1775,7 +1782,7 @@ export function MoreView({
         <div className="settings-list xp-settings-list">
           {(
             [
-              { id: 'omega', label: 'Omega-3' },
+              { id: 'omega', label: 'Suplementos del plan' },
               { id: 'movement', label: 'Pausas de movimiento' },
               { id: 'exercise', label: 'Actividad' },
               { id: 'meals', label: 'Comidas del día' },

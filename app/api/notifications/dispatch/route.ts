@@ -71,7 +71,7 @@ export async function POST(request: Request): Promise<Response> {
         const key = `${device.id}:omega:${local.date}:${device.reminder_time}`;
         try {
           const result = await send(device, {
-            title: "Tu Omega-3",
+            title: "Tu suplemento del plan",
             body: "Un pequeño hábito para cuidar tu checkpoint.",
             url: "/?screen=today",
             tag: "levelup-omega",

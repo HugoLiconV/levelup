@@ -55,8 +55,6 @@ export interface AppSettings {
   weeklyActivityGoal: number;
   strengthGoal: number;
   dailyMovementGoal: number;
-  supplementName: string;
-  supplementDose: string;
   reminderEnabled: boolean;
   reminderTime: string;
   solidDayThreshold: number;
@@ -207,13 +205,6 @@ export interface WaterLog {
   createdAt: string;
 }
 
-export interface SupplementLog {
-  id: string;
-  date: string;
-  dose: string;
-  createdAt: string;
-}
-
 export interface WeeklyReflection {
   id: string;
   weekStart: string;
@@ -258,7 +249,6 @@ export interface AppState {
   exercises: ExerciseSession[];
   movementBreaks: MovementBreak[];
   waterLogs: WaterLog[];
-  supplementLogs: SupplementLog[];
   questCompletions: QuestCompletion[];
   partnerWalks: string[];
   reflections: WeeklyReflection[];
@@ -446,6 +436,17 @@ export function deriveMealFromPlanSlot(slot: PlanSlot): Pick<Meal, 'type' | 'des
   };
 }
 
+function hasPlanSupplementLog(state: AppState, date: string): boolean {
+  const activePlan = getActivePlanForDate(state.plans, date);
+  if (!activePlan) return false;
+  return state.planSupplementLogs.some(
+    log =>
+      log.date === date &&
+      log.planId === activePlan.id &&
+      activePlan.supplements.some(supplement => supplement.name === log.supplementName)
+  );
+}
+
 function getShoppingIngredientName(name: string): string {
   // These aliases only control grouping/display in the computed list. Whether
   // something enters the list is determined by the presence of a PlanIngredient.
@@ -516,7 +517,7 @@ export function getDayData(state: AppState, date: string) {
   const movementBreaks = state.movementBreaks.filter((movement) => movement.date === date);
   const waterLogs = state.waterLogs.filter((water) => water.date === date);
   const waterMl = waterLogs.length * state.settings.bottleSizeMl;
-  const supplementTaken = state.supplementLogs.some((log) => log.date === date);
+  const supplementTaken = hasPlanSupplementLog(state, date);
   const mainMeals = meals.filter((meal) => isMainMeal(meal.type));
   const vegetableMeals = meals.filter((meal) => meal.tags.includes("Verduras"));
   const fruitMeals = meals.filter((meal) => meal.tags.includes("Fruta"));
@@ -559,7 +560,9 @@ export function getTotalXp(state: AppState): number {
     ...state.exercises.map((item) => item.date),
     ...state.movementBreaks.map((item) => item.date),
     ...state.waterLogs.map((item) => item.date),
-    ...state.supplementLogs.map((item) => item.date),
+    ...state.planSupplementLogs
+      .filter(item => hasPlanSupplementLog(state, item.date))
+      .map((item) => item.date),
     ...state.partnerWalks,
   ]);
   const dailyXp = Array.from(dates).reduce((total, date) => total + getDailyXp(state, date), 0);
@@ -597,13 +600,13 @@ export function getWeeklyStats(state: AppState, today: string) {
   const activityMinutes = dates.reduce((sum, date) => sum + state.exercises.filter((item) => item.date === date).reduce((daySum, item) => daySum + item.duration, 0), 0);
   const strengthSessions = dates.reduce((sum, date) => sum + state.exercises.filter((item) => item.date === date && (item.activity === "Fuerza" || item.activity === "Gimnasio")).length, 0);
   const movementBreaks = dates.reduce((sum, date) => sum + state.movementBreaks.filter((item) => item.date === date).length, 0);
-  const omegaDays = dates.filter((date) => state.supplementLogs.some((item) => item.date === date)).length;
+  const supplementDays = dates.filter((date) => hasPlanSupplementLog(state, date)).length;
   const mealsLogged = dates.reduce((sum, date) => sum + state.meals.filter((item) => item.date === date && isMainMeal(item.type)).length, 0);
   const solidDays = dates.filter((date) => date <= today && isSolidDay(state, date)).length;
   const weeklyGoalReached = activityMinutes >= state.settings.weeklyActivityGoal;
   const bonusXp = weeklyGoalReached ? 50 : 0;
   const weekXp = dates.reduce((sum, date) => sum + getDailyXp(state, date), 0) + bonusXp;
-  return { weekStart, dates, activityMinutes, strengthSessions, movementBreaks, omegaDays, mealsLogged, solidDays, weeklyGoalReached, bonusXp, weekXp };
+  return { weekStart, dates, activityMinutes, strengthSessions, movementBreaks, supplementDays, mealsLogged, solidDays, weeklyGoalReached, bonusXp, weekXp };
 }
 
 export function getMomentum(state: AppState, today: string) {
@@ -643,7 +646,7 @@ export function getWeeklyInsight(state: AppState, today: string): string {
   const previousWeekEnd = addDays(stats.weekStart, -1);
   const previous = getWeeklyStats(state, previousWeekEnd);
   if (stats.movementBreaks > previous.movementBreaks && stats.movementBreaks > 0) return "Tus pausas de movimiento mejoraron esta semana.";
-  if (stats.omegaDays >= 5) return "Tu mejor hábito esta semana fue tomar tu omega-3.";
+  if (stats.supplementDays >= 5) return "Tu mejor hábito esta semana fue tomar tus suplementos.";
   if (stats.activityMinutes >= state.settings.weeklyActivityGoal) return "Ya llegaste a tu meta de movimiento semanal.";
   if (stats.mealsLogged > 0) return "Registrar lo que comes te está ayudando a ver tus patrones.";
   return "Una pausa corta también cuenta. Empieza con la acción más fácil de hoy.";
@@ -694,8 +697,6 @@ export function createSeedState(): AppState {
       weeklyActivityGoal: 150,
       strengthGoal: 2,
       dailyMovementGoal: 5,
-      supplementName: "Omega-3",
-      supplementDose: "2 cápsulas cada mañana",
       reminderEnabled: false,
       reminderTime: "09:00",
       solidDayThreshold: 0.65,
@@ -707,7 +708,6 @@ export function createSeedState(): AppState {
     exercises: [],
     movementBreaks: [],
     waterLogs: [],
-    supplementLogs: [],
     questCompletions: [],
     partnerWalks: [],
     reflections: [],
@@ -731,17 +731,48 @@ export function loadState(): AppState {
   try {
     const raw = window.localStorage.getItem(STORAGE_KEY);
     if (!raw) return createSeedState();
-    const parsed = JSON.parse(raw) as Partial<AppState>;
+    const parsed = JSON.parse(raw) as Partial<AppState> & {
+      supplementLogs?: unknown;
+      settings?: Partial<AppSettings> & { supplementName?: unknown; supplementDose?: unknown };
+    };
     const seed = createSeedState();
+    const persisted = { ...parsed };
+    delete persisted.supplementLogs;
+    const persistedSettings = { ...(parsed.settings ?? {}) };
+    delete persistedSettings.supplementName;
+    delete persistedSettings.supplementDose;
+    const legacySupplementName = typeof parsed.settings?.supplementName === 'string'
+      ? parsed.settings.supplementName
+      : '';
+    const migratedSupplementLogs: PlanSupplementLog[] = Array.isArray(parsed.supplementLogs)
+      ? parsed.supplementLogs.flatMap((value, index) => {
+          if (!value || typeof value !== 'object') return [];
+          const legacyLog = value as { id?: unknown; date?: unknown };
+          if (typeof legacyLog.date !== 'string') return [];
+          const plan = getActivePlanForDate(Array.isArray(parsed.plans) ? parsed.plans : [], legacyLog.date);
+          if (!plan) return [];
+          const matchingSupplement = plan.supplements.find(supplement =>
+            legacySupplementName && normalizeText(supplement.name) === normalizeText(legacySupplementName)
+          ) ?? (plan.supplements.length === 1 ? plan.supplements[0] : null);
+          if (!matchingSupplement) return [];
+          return [{
+            id: `${typeof legacyLog.id === 'string' ? legacyLog.id : `legacy-${index}`}-migrated`,
+            date: legacyLog.date,
+            planId: plan.id,
+            supplementName: matchingSupplement.name,
+            createdAt: legacyLog.date
+          }];
+        })
+      : [];
     return {
       ...seed,
-      ...parsed,
-      settings: { ...seed.settings, ...(parsed.settings ?? {}), questXp: { ...seed.settings.questXp, ...(parsed.settings?.questXp ?? {}) } },
+      ...persisted,
+      settings: { ...seed.settings, ...persistedSettings, questXp: { ...seed.settings.questXp, ...(parsed.settings?.questXp ?? {}) } },
       labs: parsed.labs?.length ? parsed.labs : seed.labs,
       intentions: parsed.intentions?.length ? parsed.intentions : seed.intentions,
       plans: Array.isArray(parsed.plans) ? parsed.plans : seed.plans,
       planSlotCompletions: Array.isArray(parsed.planSlotCompletions) ? parsed.planSlotCompletions : seed.planSlotCompletions,
-      planSupplementLogs: Array.isArray(parsed.planSupplementLogs) ? parsed.planSupplementLogs : seed.planSupplementLogs,
+      planSupplementLogs: Array.isArray(parsed.planSupplementLogs) ? parsed.planSupplementLogs : migratedSupplementLogs,
       shoppingListState: {
         ...seed.shoppingListState,
         ...(parsed.shoppingListState ?? {}),

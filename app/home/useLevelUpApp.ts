@@ -28,6 +28,7 @@ import {
   type Meal,
   type Plan,
   type PlanSlot,
+  type PlanSupplement,
   type QuestId
 } from '../lib/levelup';
 import { getRequestedScreen, type ModalState, type Screen } from './shared';
@@ -123,26 +124,6 @@ export function useLevelUpApp() {
         ]
       };
     }, message);
-  };
-
-  const logOmega = () => {
-    if (todayData.supplementTaken) return;
-    apply(
-      previous => ({
-        ...previous,
-        supplementLogs: [
-          ...previous.supplementLogs,
-          {
-            id: createId('omega'),
-            date: today,
-            dose: previous.settings.supplementDose,
-            createdAt: new Date().toISOString()
-          }
-        ]
-      }),
-      `✓ ${state.settings.supplementName} registrado · +${state.settings.questXp.omega} XP`
-    );
-    completeQuest('omega', '');
   };
 
   const logMovementBreak = () => {
@@ -281,6 +262,38 @@ export function useLevelUpApp() {
         ]
       };
     }, existing ? 'Comida del plan eliminada' : 'Comida del plan registrada · +5 XP');
+  };
+
+  const togglePlanSupplement = (planId: string, supplement: PlanSupplement) => {
+    const existing = state.planSupplementLogs.find(
+      log =>
+        log.date === today &&
+        log.planId === planId &&
+        log.supplementName === supplement.name
+    );
+
+    apply(previous => {
+      if (existing) {
+        return {
+          ...previous,
+          planSupplementLogs: previous.planSupplementLogs.filter(log => log.id !== existing.id)
+        };
+      }
+
+      return {
+        ...previous,
+        planSupplementLogs: [
+          ...previous.planSupplementLogs,
+          {
+            id: createId('plan-supplement-log'),
+            date: today,
+            planId,
+            supplementName: supplement.name,
+            createdAt: new Date().toISOString()
+          }
+        ]
+      };
+    }, existing ? `${supplement.name} desmarcado` : `✓ ${supplement.name} registrado · +${state.settings.questXp.omega} XP`);
   };
 
   const addExercise = (exercise: {
@@ -429,12 +442,12 @@ export function useLevelUpApp() {
     totalXp,
     level,
     logMovementBreak,
-    logOmega,
     logPartnerWalk,
     logWater,
     repeatRecentMeal,
     deleteMeal,
     togglePlanSlot,
+    togglePlanSupplement,
     addMeal,
     addExercise,
     saveLabs,
