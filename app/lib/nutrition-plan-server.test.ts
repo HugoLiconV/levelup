@@ -15,7 +15,7 @@ function modelResponse(ingredient: { name: string; quantityText: string; grams: 
         dishes: [{ name: 'Plato', tags: [], ingredients: [ingredient] }]
       }]
     }],
-    supplements: []
+    supplements: [] as Array<{ name: string; doseText: string }>
   };
 }
 
