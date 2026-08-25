@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useState } from 'react';
+import { useSearchParams } from 'next/navigation';
 import { Icon, type IconName } from '../components/Icons';
 import { InstallGuide } from '../components/InstallGuide';
 import {
@@ -17,7 +18,6 @@ import {
   getDailyXp,
   getDayData,
   getActivePlanForDate,
-  getDayTypeForDate,
   getJourneyStatus,
   getLevel,
   getMilestones,
@@ -44,6 +44,7 @@ import {
   type NotificationPermissionState,
   type Screen
 } from './shared';
+import { ActivePlanView } from './food-guide';
 
 export function TodayView({
   state,
@@ -568,7 +569,10 @@ export function FoodView({
   onDeleteMeal: (mealId: string) => void;
   onWater: () => void;
 }) {
-  const [tab, setTab] = useState<'registro' | 'guia'>('registro');
+  const searchParams = useSearchParams();
+  const [tab, setTab] = useState<'registro' | 'guia'>(() =>
+    searchParams.has('variant') ? 'guia' : 'registro'
+  );
   const recentMeal = [...state.meals].sort((a, b) =>
     b.createdAt.localeCompare(a.createdAt)
   )[0];
@@ -757,7 +761,7 @@ function FoodGuide({
   today: string;
 }) {
   if (activePlan) {
-    return <ActivePlanSummary plan={activePlan} today={today} onPlanEntry={onPlanEntry} />;
+    return <ActivePlanView plan={activePlan} today={today} onPlanEntry={onPlanEntry} />;
   }
   return (
     <div className="food-guide">
@@ -769,52 +773,6 @@ function FoodGuide({
         </div>
         <button className="primary-button" onClick={onPlanEntry}>Pegar menú</button>
       </div>
-    </div>
-  );
-}
-
-function ActivePlanSummary({
-  plan,
-  today,
-  onPlanEntry
-}: {
-  plan: Plan;
-  today: string;
-  onPlanEntry: () => void;
-}) {
-  const todayDayType = getDayTypeForDate(plan, today);
-  const slotCount = plan.dayTypes.reduce((total, dayType) => total + dayType.slots.length, 0);
-  const dishCount = plan.dayTypes.reduce((total, dayType) => total + dayType.slots.reduce((slotTotal, slot) => slotTotal + slot.dishes.length, 0), 0);
-  return (
-    <div className="food-guide plan-summary">
-      <section className="personal-plan plan-summary-header">
-        <div className="personal-plan-head">
-          <div>
-            <p className="eyebrow">PLAN ACTIVO · {formatLongDate(plan.startDate)}</p>
-            <h2>Plan de tu nutriólogo</h2>
-          </div>
-          <button className="text-button" onClick={onPlanEntry}>Nuevo <Icon name="plus" size={13} /></button>
-        </div>
-        <p className="muted">Hoy corresponde: <strong>{todayDayType?.name ?? 'sin variante asignada'}</strong></p>
-      </section>
-      <div className="plan-save-success">
-        <span><Icon name="check" size={17} /></span>
-        <div>
-          <strong>Tu menú quedó guardado</strong>
-          <p>Está guardado en este dispositivo y listo para acompañarte cada día.</p>
-        </div>
-      </div>
-      <section className="plan-saved-stats">
-        <div><strong>{plan.dayTypes.length}</strong><span>tipos de día</span></div>
-        <div><strong>{slotCount}</strong><span>slots</span></div>
-        <div><strong>{dishCount}</strong><span>platillos</span></div>
-        <div><strong>{plan.supplements.length}</strong><span>suplementos</span></div>
-      </section>
-      <section className="plan-day-type-card">
-        <p className="eyebrow">PARA HOY</p>
-        <h3>{todayDayType?.name ?? 'Sin variante asignada'}</h3>
-        <p className="muted">Revisa y corrige cualquier detalle abriendo una nueva versión desde el botón “Nuevo”.</p>
-      </section>
     </div>
   );
 }
