@@ -713,7 +713,7 @@ export function createSeedState(): AppState {
     version: 1,
     protectedXp: 0,
     settings: {
-      name: "Hugo",
+      name: "",
       startDate: "2026-08-10",
       appointmentDate: "2026-11-10",
       labWindowDate: "2026-11-06",

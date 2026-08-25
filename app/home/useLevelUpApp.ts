@@ -3,6 +3,7 @@
 import { useRouter } from 'next/navigation';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { createClient } from '../lib/supabase/client';
+import { getAuthDisplayName } from '../lib/auth-display-name';
 import { useDataTransfer } from './useDataTransfer';
 import { useNotifications } from './useNotifications';
 import {
@@ -40,6 +41,7 @@ export function useLevelUpApp() {
   const [screen, setScreen] = useState<Screen>('today');
   const [modal, setModal] = useState<ModalState>(null);
   const [notice, setNotice] = useState<string | null>(null);
+  const [viewerName, setViewerName] = useState<string | null>(null);
   const previousLevelRef = useRef<number | null>(null);
 
   const today = toDateInput(new Date());
@@ -68,6 +70,21 @@ export function useLevelUpApp() {
       setReady(true);
     });
     return () => window.cancelAnimationFrame(frame);
+  }, []);
+
+  useEffect(() => {
+    let active = true;
+    const supabase = createClient();
+
+    void supabase.auth.getUser().then(({ data }) => {
+      if (active) setViewerName(getAuthDisplayName(data.user?.user_metadata));
+    }).catch(() => {
+      if (active) setViewerName(null);
+    });
+
+    return () => {
+      active = false;
+    };
   }, []);
 
   useEffect(() => {
@@ -431,6 +448,7 @@ export function useLevelUpApp() {
     modal,
     setModal,
     notice,
+    viewerName,
     today,
     todayData,
     journeyStatus,

@@ -27,6 +27,7 @@ export default function LevelUpApp() {
     modal,
     setModal,
     notice,
+    viewerName,
     timerEndsAt,
     timerMinutes,
     notificationPermission,
@@ -113,6 +114,7 @@ export default function LevelUpApp() {
             weeklyStats={weeklyStats}
             momentum={momentum}
             totalXp={totalXp}
+            viewerName={viewerName}
             onMove={logMovementBreak}
             onPartnerWalk={logPartnerWalk}
             onWater={logWater}

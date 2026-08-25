@@ -60,6 +60,7 @@ export function TodayView({
   weeklyStats,
   momentum,
   totalXp,
+  viewerName,
   onMove,
   onPartnerWalk,
   onWater,
@@ -76,6 +77,7 @@ export function TodayView({
   weeklyStats: ReturnType<typeof getWeeklyStats>;
   momentum: ReturnType<typeof getMomentum>;
   totalXp: number;
+  viewerName: string | null;
   onMove: () => void;
   onPartnerWalk: () => void;
   onWater: () => void;
@@ -127,8 +129,8 @@ export function TodayView({
           <p className="eyebrow">{formatWeekday(today)}</p>
           <h1>
             {journeyStatus === 'completed'
-              ? 'Lo hiciste, Hugo'
-              : `${getGreeting()}, ${state.settings.name}`}
+              ? viewerName ? `Lo hiciste, ${viewerName}` : 'Lo hiciste'
+              : viewerName ? `${getGreeting()}, ${viewerName}` : getGreeting()}
           </h1>
           <p className="muted">
             {journeyStatus === 'upcoming'
