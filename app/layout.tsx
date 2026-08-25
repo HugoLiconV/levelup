@@ -3,6 +3,7 @@ import { Geist, Geist_Mono } from "next/font/google";
 import "./globals.css";
 import "./bottom-nav-fix.css";
 import { OfflineStatus } from "./components/OfflineStatus";
+import { PERSONAL_MODE } from "./lib/feature-flags";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -15,8 +16,12 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "LevelUp · Tu checkpoint de 92 días",
-  description: "Un acompañante personal para construir hábitos antes de tu próximo checkpoint.",
+  title: PERSONAL_MODE
+    ? "LevelUp · Tu checkpoint de 92 días"
+    : "LevelUp · Hábitos, un día a la vez",
+  description: PERSONAL_MODE
+    ? "Un acompañante personal para construir hábitos antes de tu próximo checkpoint."
+    : "Convierte tus objetivos de bienestar en pequeñas acciones diarias.",
   applicationName: "LevelUp",
   appleWebApp: {
     capable: true,

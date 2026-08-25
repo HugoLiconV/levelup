@@ -131,24 +131,26 @@ export function TodayView({
         <div>
           <p className="eyebrow">{formatWeekday(today)}</p>
           <h1>
-            {journeyStatus === 'completed'
+            {PERSONAL_MODE && journeyStatus === 'completed'
               ? viewerName ? `Lo hiciste, ${viewerName}` : 'Lo hiciste'
               : viewerName ? `${getGreeting()}, ${viewerName}` : getGreeting()}
           </h1>
           <p className="muted">
-            {journeyStatus === 'upcoming'
+            {PERSONAL_MODE && journeyStatus === 'upcoming'
               ? `Tu reto comienza el ${formatShortDate(state.settings.startDate)}.`
-              : journeyStatus === 'completed'
+              : PERSONAL_MODE && journeyStatus === 'completed'
                 ? 'Tu checkpoint ya llegó. Tus registros siguen aquí.'
                 : 'Pequeñas acciones. Un día a la vez.'}
           </p>
         </div>
-        <div
-          className="day-orb"
-          aria-label={`Día ${journeyDay} de ${TOTAL_DAYS}`}>
-          <strong>{journeyDay}</strong>
-          <span>/ {TOTAL_DAYS}</span>
-        </div>
+        {PERSONAL_MODE && (
+          <div
+            className="day-orb"
+            aria-label={`Día ${journeyDay} de ${TOTAL_DAYS}`}>
+            <strong>{journeyDay}</strong>
+            <span>/ {TOTAL_DAYS}</span>
+          </div>
+        )}
       </section>
 
       {!activePlan && (
@@ -176,9 +178,11 @@ export function TodayView({
         </section>
       )}
 
-      <CheckpointStrip state={state} today={today} journeyDay={journeyDay} />
+      {PERSONAL_MODE && (
+        <CheckpointStrip state={state} today={today} journeyDay={journeyDay} />
+      )}
 
-      {journeyStatus === 'upcoming' && (
+      {PERSONAL_MODE && journeyStatus === 'upcoming' && (
         <div className="soft-banner">
           <Icon name="sparkles" size={18} />
           <div>
@@ -190,7 +194,7 @@ export function TodayView({
           </div>
         </div>
       )}
-      {journeyStatus === 'completed' && (
+      {PERSONAL_MODE && journeyStatus === 'completed' && (
         <div className="soft-banner completed-banner">
           <Icon name="flag" size={18} />
           <div>
@@ -436,12 +440,12 @@ export function TodayView({
           <Icon name="sparkles" size={16} />
         </span>
         <p>
-          {journeyStatus === 'active'
+          {!PERSONAL_MODE || journeyStatus === 'active'
             ? getTodayInsight(state, today, weeklyStats)
             : 'Tu plan sigue aquí cuando estés listo.'}
         </p>
       </div>
-      {journeyStatus === 'active' && daysUntil > 0 && (
+      {PERSONAL_MODE && journeyStatus === 'active' && daysUntil > 0 && (
         <p className="checkpoint-caption">
           Faltan {daysUntil} días para tu cita del{' '}
           {formatShortDate(state.settings.appointmentDate)}.
@@ -1167,7 +1171,9 @@ export function ProgressView({
       <PageHeader
         eyebrow="PROGRESO"
         title="Tu recorrido"
-        subtitle="Una vista tranquila de lo que estás haciendo antes del checkpoint."
+        subtitle={PERSONAL_MODE
+          ? 'Una vista tranquila de lo que estás haciendo antes del checkpoint.'
+          : 'Una vista tranquila de los hábitos que estás construyendo.'}
       />
       <section className="level-card">
         <div className="level-badge">
@@ -1192,7 +1198,7 @@ export function ProgressView({
         <Icon name="sparkles" size={23} />
       </section>
       <PersonalBestsSection state={state} />
-      <section className="timeline-section">
+      {PERSONAL_MODE && <section className="timeline-section">
         <div className="section-heading">
           <div>
             <p className="eyebrow">AGOSTO — NOVIEMBRE</p>
@@ -1205,7 +1211,7 @@ export function ProgressView({
           </span>
         </div>
         <Timeline state={state} today={today} />
-      </section>
+      </section>}
       <section>
         <div className="section-heading">
           <div>
@@ -1566,8 +1572,13 @@ function LabsSection({
 }
 
 function AchievementsSection({ state }: { state: AppState }) {
+  const personalAchievementIds = new Set([
+    'twoWeeksIn',
+    'walkTogether',
+    'halfway'
+  ]);
   const visibleAchievementIds = ACHIEVEMENT_ORDER.filter(
-    id => PERSONAL_MODE || id !== 'walkTogether'
+    id => PERSONAL_MODE || !personalAchievementIds.has(id)
   );
   const unlockedVisibleCount = visibleAchievementIds.filter(id =>
     state.achievements.some(achievement => achievement.id === id)
@@ -1682,7 +1693,7 @@ export function MoreView({
           </div>
         </div>
         <div className="settings-list">
-          <label className="setting-row">
+          {PERSONAL_MODE && <label className="setting-row">
             <span>
               <strong>Fecha de la cita</strong>
               <small>{formatLongDate(state.settings.appointmentDate)}</small>
@@ -1694,7 +1705,7 @@ export function MoreView({
                 onSettingsChange({ appointmentDate: event.target.value })
               }
             />
-          </label>
+          </label>}
           {PERSONAL_MODE && (
             <label className="setting-row">
               <span>

@@ -1,11 +1,14 @@
 import type { MetadataRoute } from "next";
+import { PERSONAL_MODE } from "./lib/feature-flags";
 
 export default function manifest(): MetadataRoute.Manifest {
   return {
     id: "/",
     name: "LevelUp",
     short_name: "LevelUp",
-    description: "Tu checkpoint personal de 92 días.",
+    description: PERSONAL_MODE
+      ? "Tu checkpoint personal de 92 días."
+      : "Hábitos y bienestar, un día a la vez.",
     start_url: "/",
     scope: "/",
     display: "standalone",
