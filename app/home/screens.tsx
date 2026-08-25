@@ -3,6 +3,7 @@
 import { useEffect, useState } from 'react';
 import { Icon, type IconName } from '../components/Icons';
 import { InstallGuide } from '../components/InstallGuide';
+import { PERSONAL_MODE } from '../lib/feature-flags';
 import {
   ACHIEVEMENT_META,
   ACHIEVEMENT_ORDER,
@@ -356,33 +357,38 @@ export function TodayView({
         </div>
       </section>
 
-      <div className="optional-quest">
-        <div className="optional-icon">
-          <Icon name="users" size={19} />
+      {PERSONAL_MODE && (
+        <div className="optional-quest">
+          <div className="optional-icon">
+            <Icon name="users" size={19} />
+          </div>
+          <div>
+            <span className="optional-label">BONUS OPCIONAL</span>
+            <strong>Caminar juntos</strong>
+            <small>
+              10+ minutos después de cenar · +
+              {state.settings.questXp.partnerWalk} XP
+            </small>
+          </div>
+          <button
+            className={classNames(
+              'small-check',
+              partnerComplete && 'is-checked'
+            )}
+            onClick={onPartnerWalk}
+            aria-label={
+              partnerComplete
+                ? 'Caminata con pareja registrada'
+                : 'Registrar caminata con pareja'
+            }>
+            {partnerComplete ? (
+              <Icon name="check" size={15} />
+            ) : (
+              <Icon name="plus" size={16} />
+            )}
+          </button>
         </div>
-        <div>
-          <span className="optional-label">BONUS OPCIONAL</span>
-          <strong>Caminar juntos</strong>
-          <small>
-            10+ minutos después de cenar · +{state.settings.questXp.partnerWalk}{' '}
-            XP
-          </small>
-        </div>
-        <button
-          className={classNames('small-check', partnerComplete && 'is-checked')}
-          onClick={onPartnerWalk}
-          aria-label={
-            partnerComplete
-              ? 'Caminata con pareja registrada'
-              : 'Registrar caminata con pareja'
-          }>
-          {partnerComplete ? (
-            <Icon name="check" size={15} />
-          ) : (
-            <Icon name="plus" size={16} />
-          )}
-        </button>
-      </div>
+      )}
 
       <div className="two-column-cards">
         <div className="mini-card xp-mini">
@@ -1264,17 +1270,19 @@ export function ProgressView({
       </section>
       <FoodPatternsSection state={state} dates={weeklyStats.dates} />
       <AchievementsSection state={state} />
-      <LabsSection
-        baseline={baseline}
-        followUp={followUp}
-        onOpenLabs={onOpenLabs}
-      />
+      {PERSONAL_MODE && (
+        <LabsSection
+          baseline={baseline}
+          followUp={followUp}
+          onOpenLabs={onOpenLabs}
+        />
+      )}
     </div>
   );
 }
 
 function Timeline({ state, today }: { state: AppState; today: string }) {
-  const milestones = getMilestones(state.settings);
+  const milestones = getMilestones(state.settings, PERSONAL_MODE);
   return (
     <div className="milestone-list">
       {milestones.map((milestone, index) => {
@@ -1538,6 +1546,13 @@ function LabsSection({
 }
 
 function AchievementsSection({ state }: { state: AppState }) {
+  const visibleAchievementIds = ACHIEVEMENT_ORDER.filter(
+    id => PERSONAL_MODE || id !== 'walkTogether'
+  );
+  const unlockedVisibleCount = visibleAchievementIds.filter(id =>
+    state.achievements.some(achievement => achievement.id === id)
+  ).length;
+
   return (
     <section>
       <div className="section-heading">
@@ -1546,11 +1561,11 @@ function AchievementsSection({ state }: { state: AppState }) {
           <h2>Logros</h2>
         </div>
         <span className="quiet-count">
-          {state.achievements.length} / {ACHIEVEMENT_ORDER.length}
+          {unlockedVisibleCount} / {visibleAchievementIds.length}
         </span>
       </div>
       <div className="achievement-grid">
-        {ACHIEVEMENT_ORDER.map(id => {
+        {visibleAchievementIds.map(id => {
           const achievement = state.achievements.find(item => item.id === id);
           const meta = ACHIEVEMENT_META[id];
           return (
@@ -1612,31 +1627,33 @@ export function MoreView({
         subtitle="Ajustes simples para que LevelUp siga siendo tuyo."
       />
       <InstallGuide />
-      <section>
-        <div className="section-heading">
-          <div>
-            <p className="eyebrow">IF → THEN</p>
-            <h2>Mi plan</h2>
+      {PERSONAL_MODE && (
+        <section>
+          <div className="section-heading">
+            <div>
+              <p className="eyebrow">IF → THEN</p>
+              <h2>Mi plan</h2>
+            </div>
           </div>
-        </div>
-        <div className="intentions-list">
-          {state.intentions.map(intention => (
-            <button
-              className="intention-row"
-              key={intention.id}
-              onClick={() => onEditIntention(intention)}>
-              <span className="intention-if">
-                SI <strong>{intention.ifText}</strong>
-              </span>
-              <Icon name="arrow" size={15} />
-              <span className="intention-then">
-                ENTONCES <strong>{intention.thenText}</strong>
-              </span>
-              <Icon name="edit" size={14} />
-            </button>
-          ))}
-        </div>
-      </section>
+          <div className="intentions-list">
+            {state.intentions.map(intention => (
+              <button
+                className="intention-row"
+                key={intention.id}
+                onClick={() => onEditIntention(intention)}>
+                <span className="intention-if">
+                  SI <strong>{intention.ifText}</strong>
+                </span>
+                <Icon name="arrow" size={15} />
+                <span className="intention-then">
+                  ENTONCES <strong>{intention.thenText}</strong>
+                </span>
+                <Icon name="edit" size={14} />
+              </button>
+            ))}
+          </div>
+        </section>
+      )}
       <section>
         <div className="section-heading">
           <div>
@@ -1658,19 +1675,21 @@ export function MoreView({
               }
             />
           </label>
-          <label className="setting-row">
-            <span>
-              <strong>Ventana de laboratorios</strong>
-              <small>Edita la fecha cuando la tengas clara</small>
-            </span>
-            <input
-              type="date"
-              value={state.settings.labWindowDate}
-              onChange={event =>
-                onSettingsChange({ labWindowDate: event.target.value })
-              }
-            />
-          </label>
+          {PERSONAL_MODE && (
+            <label className="setting-row">
+              <span>
+                <strong>Ventana de laboratorios</strong>
+                <small>Edita la fecha cuando la tengas clara</small>
+              </span>
+              <input
+                type="date"
+                value={state.settings.labWindowDate}
+                onChange={event =>
+                  onSettingsChange({ labWindowDate: event.target.value })
+                }
+              />
+            </label>
+          )}
           <label className="setting-row">
             <span>
               <strong>Meta de actividad semanal</strong>
@@ -1820,7 +1839,9 @@ export function MoreView({
               { id: 'vegetables', label: 'Verduras' },
               { id: 'fruit', label: 'Fruta' },
               { id: 'water', label: 'Agua' },
-              { id: 'partnerWalk', label: 'Caminata juntos' }
+              ...(PERSONAL_MODE
+                ? [{ id: 'partnerWalk' as const, label: 'Caminata juntos' }]
+                : [])
             ] as Array<{ id: QuestId; label: string }>
           ).map(quest => (
             <label className="setting-row" key={quest.id}>

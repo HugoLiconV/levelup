@@ -265,7 +265,7 @@ export interface AppState {
 export const STORAGE_KEY = "levelup-local-state-v1";
 export const TOTAL_DAYS = 92;
 
-export const DEFAULT_LAB_VALUES: LabValues = {
+export const PERSONAL_LAB_VALUES: LabValues = {
   triglycerides: 182,
   ldl: 119,
   hdl: 42,
@@ -646,14 +646,16 @@ export function isExerciseDay(today: string, settings: AppSettings): boolean {
   return [1, 3, 5].includes((journeyDay - 1) % 7);
 }
 
-export function getMilestones(settings: AppSettings) {
+export function getMilestones(settings: AppSettings, includeLabWindow = true) {
   const candidates = [
     { label: "Inicio", date: settings.startDate, icon: "sparkles" },
     { label: "2 semanas", date: addDays(settings.startDate, 13), icon: "calendar" },
     { label: "1 mes", date: addDays(settings.startDate, 29), icon: "leaf" },
     { label: "Mitad", date: addDays(settings.startDate, 45), icon: "flag" },
     { label: "1 mes restante", date: addDays(settings.startDate, 61), icon: "target" },
-    { label: "Ventana de laboratorios", date: settings.labWindowDate, icon: "flask" },
+    ...(includeLabWindow
+      ? [{ label: "Ventana de laboratorios", date: settings.labWindowDate, icon: "flask" }]
+      : []),
     { label: "Cita médica", date: settings.appointmentDate, icon: "heart" },
   ];
   const seen = new Set<string>();
@@ -708,15 +710,26 @@ export function syncAchievements(state: AppState, today: string): AppState {
   return { ...synced, protectedXp: getTotalXp(synced) };
 }
 
-export function createSeedState(): AppState {
+type SeedStateOptions = {
+  personalMode?: boolean;
+  today?: string;
+};
+
+export function createSeedState(options: SeedStateOptions = {}): AppState {
+  const personalMode = options.personalMode ?? false;
+  const today = options.today ?? getToday();
+  const startDate = personalMode ? "2026-08-10" : today;
+  const appointmentDate = personalMode ? "2026-11-10" : addDays(today, TOTAL_DAYS - 1);
+  const labWindowDate = personalMode ? "2026-11-06" : appointmentDate;
+
   return {
     version: 1,
     protectedXp: 0,
     settings: {
       name: "",
-      startDate: "2026-08-10",
-      appointmentDate: "2026-11-10",
-      labWindowDate: "2026-11-06",
+      startDate,
+      appointmentDate,
+      labWindowDate,
       weeklyActivityGoal: 150,
       strengthGoal: 2,
       dailyMovementGoal: 5,
@@ -735,30 +748,34 @@ export function createSeedState(): AppState {
     partnerWalks: [],
     reflections: [],
     achievements: [],
-    labs: [{ id: "baseline", label: "Baseline", date: "2026-08-10", values: DEFAULT_LAB_VALUES }],
+    labs: personalMode
+      ? [{ id: "baseline", label: "Baseline", date: "2026-08-10", values: PERSONAL_LAB_VALUES }]
+      : [],
     plans: [],
     planSlotCompletions: [],
     planSupplementLogs: [],
     shoppingListState: { bought: {} },
-    intentions: [
-      { id: "lunch-walk", ifText: "Termino de comer", thenText: "caminaré 5–10 minutos." },
-      { id: "desk-break", ifText: "Llevo mucho tiempo en el escritorio", thenText: "me pondré de pie y me moveré." },
-      { id: "dinner-walk", ifText: "Terminamos de cenar y tenemos tiempo", thenText: "le preguntaré a mi pareja si damos una caminata corta." },
-      { id: "morning-omega", ifText: "Es por la mañana", thenText: "tomaré mi omega-3." },
-    ],
+    intentions: personalMode
+      ? [
+          { id: "lunch-walk", ifText: "Termino de comer", thenText: "caminaré 5–10 minutos." },
+          { id: "desk-break", ifText: "Llevo mucho tiempo en el escritorio", thenText: "me pondré de pie y me moveré." },
+          { id: "dinner-walk", ifText: "Terminamos de cenar y tenemos tiempo", thenText: "le preguntaré a mi pareja si damos una caminata corta." },
+          { id: "morning-omega", ifText: "Es por la mañana", thenText: "tomaré mi omega-3." },
+        ]
+      : [],
   };
 }
 
-export function loadState(): AppState {
-  if (typeof window === "undefined") return createSeedState();
+export function loadState(options: SeedStateOptions = {}): AppState {
+  if (typeof window === "undefined") return createSeedState(options);
   try {
     const raw = window.localStorage.getItem(STORAGE_KEY);
-    if (!raw) return createSeedState();
+    if (!raw) return createSeedState(options);
     const parsed = JSON.parse(raw) as Partial<AppState> & {
       supplementLogs?: unknown;
       settings?: Partial<AppSettings> & { supplementName?: unknown; supplementDose?: unknown };
     };
-    const seed = createSeedState();
+    const seed = createSeedState(options);
     const persisted = { ...parsed };
     delete persisted.supplementLogs;
     const persistedSettings = { ...(parsed.settings ?? {}) };
@@ -806,7 +823,7 @@ export function loadState(): AppState {
       },
     } as AppState;
   } catch {
-    return createSeedState();
+    return createSeedState(options);
   }
 }
 

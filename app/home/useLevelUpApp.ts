@@ -4,6 +4,7 @@ import { useRouter } from 'next/navigation';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { createClient } from '../lib/supabase/client';
 import { getAuthDisplayName } from '../lib/auth-display-name';
+import { PERSONAL_MODE } from '../lib/feature-flags';
 import { useDataTransfer } from './useDataTransfer';
 import { useNotifications } from './useNotifications';
 import {
@@ -36,7 +37,9 @@ import { getRequestedScreen, type ModalState, type Screen } from './shared';
 
 export function useLevelUpApp() {
   const router = useRouter();
-  const [state, setState] = useState<AppState>(() => createSeedState());
+  const [state, setState] = useState<AppState>(() =>
+    createSeedState({ personalMode: PERSONAL_MODE })
+  );
   const [ready, setReady] = useState(false);
   const [screen, setScreen] = useState<Screen>('today');
   const [modal, setModal] = useState<ModalState>(null);
@@ -65,7 +68,7 @@ export function useLevelUpApp() {
 
   useEffect(() => {
     const frame = window.requestAnimationFrame(() => {
-      const loaded = loadState();
+      const loaded = loadState({ personalMode: PERSONAL_MODE });
       setState(syncAchievements(loaded, toDateInput(new Date())));
       setReady(true);
     });

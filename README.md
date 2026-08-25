@@ -230,6 +230,10 @@ pnpm dev
 
 La aplicación requiere las variables públicas de Supabase y `OPENAI_API_KEY`. Los nombres completos de configuración se encuentran en el código del servidor y en la configuración de despliegue; nunca se deben publicar secretos en el repositorio.
 
+### Modo personal
+
+`NEXT_PUBLIC_PERSONAL_MODE=true` activa los datos y módulos originales de Hugo: fechas del checkpoint, laboratorios, intenciones y la quest de caminata en pareja. La variable es pública y se fija durante el build de Next.js; debe omitirse o configurarse como `false` en despliegues para otros usuarios.
+
 ## Verificación
 
 ```bash

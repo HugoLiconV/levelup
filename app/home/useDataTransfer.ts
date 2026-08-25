@@ -7,6 +7,7 @@ import {
   syncAchievements,
   type AppState
 } from '../lib/levelup';
+import { PERSONAL_MODE } from '../lib/feature-flags';
 
 type DataTransferOptions = {
   state: AppState;
@@ -48,7 +49,7 @@ export function useDataTransfer({
           !Array.isArray(parsed.exercises)
         )
           throw new Error('invalid');
-        const seed = createSeedState();
+        const seed = createSeedState({ personalMode: PERSONAL_MODE });
         const imported = {
           ...seed,
           ...parsed,
@@ -78,7 +79,7 @@ export function useDataTransfer({
       )
     )
       return;
-    const fresh = createSeedState();
+    const fresh = createSeedState({ personalMode: PERSONAL_MODE });
     setState(fresh);
     saveState(fresh);
     setNotice('Datos restablecidos');

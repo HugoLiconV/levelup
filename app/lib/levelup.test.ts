@@ -33,6 +33,32 @@ describe('meal tag taxonomy', () => {
   });
 });
 
+describe('seed state modes', () => {
+  it('keeps personal data out of the public seed', () => {
+    const state = createSeedState({
+      personalMode: false,
+      today: '2026-08-24'
+    });
+
+    expect(state.settings.startDate).toBe('2026-08-24');
+    expect(state.settings.appointmentDate).toBe('2026-11-23');
+    expect(state.labs).toEqual([]);
+    expect(state.intentions).toEqual([]);
+    expect(JSON.stringify(state)).not.toContain('182');
+    expect(JSON.stringify(state)).not.toContain('mi pareja');
+  });
+
+  it('preserves Hugo’s original defaults in personal mode', () => {
+    const state = createSeedState({ personalMode: true });
+
+    expect(state.settings.startDate).toBe('2026-08-10');
+    expect(state.settings.appointmentDate).toBe('2026-11-10');
+    expect(state.labs[0]?.values.triglycerides).toBe(182);
+    expect(state.intentions.some(item => item.thenText.includes('mi pareja')))
+      .toBe(true);
+  });
+});
+
 function ingredient(
   name: string,
   quantityText: string,
