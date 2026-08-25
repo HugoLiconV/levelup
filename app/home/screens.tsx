@@ -1,7 +1,6 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { useSearchParams } from 'next/navigation';
 import { Icon, type IconName } from '../components/Icons';
 import { InstallGuide } from '../components/InstallGuide';
 import {
@@ -18,6 +17,7 @@ import {
   getDailyXp,
   getDayData,
   getActivePlanForDate,
+  getDayTypeForDate,
   getJourneyStatus,
   getLevel,
   getMilestones,
@@ -32,6 +32,7 @@ import {
   type LabCheckpoint,
   type Meal,
   type Plan,
+  type PlanSlot,
   type QuestId
 } from '../lib/levelup';
 import {
@@ -45,6 +46,7 @@ import {
   type Screen
 } from './shared';
 import { ActivePlanView } from './food-guide';
+import { PlanSlotChecklist } from './plan-slot-checklist';
 
 export function TodayView({
   state,
@@ -558,6 +560,7 @@ export function FoodView({
   onRepeatMeal,
   onPlanEntry,
   onDeleteMeal,
+  onTogglePlanSlot,
   onWater
 }: {
   state: AppState;
@@ -567,11 +570,30 @@ export function FoodView({
   onRepeatMeal: () => void;
   onPlanEntry: () => void;
   onDeleteMeal: (mealId: string) => void;
+  onTogglePlanSlot: (
+    planId: string,
+    dayTypeId: string,
+    slot: PlanSlot
+  ) => void;
   onWater: () => void;
 }) {
-  const searchParams = useSearchParams();
-  const [tab, setTab] = useState<'registro' | 'guia'>(() =>
-    searchParams.has('variant') ? 'guia' : 'registro'
+  const [tab, setTab] = useState<'registro' | 'guia'>('registro');
+  const activePlan = getActivePlanForDate(state.plans, today);
+  const activeDayType = activePlan
+    ? getDayTypeForDate(activePlan, today)
+    : null;
+  const showPlanChecklist = Boolean(activePlan && activeDayType?.slots.length);
+  const completedSlotIds = new Set(
+    activePlan && activeDayType
+      ? state.planSlotCompletions
+          .filter(
+            completion =>
+              completion.date === today &&
+              completion.planId === activePlan.id &&
+              completion.dayTypeId === activeDayType.id
+          )
+          .map(completion => completion.slotId)
+      : []
   );
   const recentMeal = [...state.meals].sort((a, b) =>
     b.createdAt.localeCompare(a.createdAt)
@@ -625,6 +647,17 @@ export function FoodView({
             </button>
           )}
 
+          {activePlan && activeDayType && showPlanChecklist && (
+            <PlanSlotChecklist
+              dayType={activeDayType}
+              completedSlotIds={completedSlotIds}
+              onToggle={slot =>
+                onTogglePlanSlot(activePlan.id, activeDayType.id, slot)
+              }
+              onOpenMeal={onOpenMeal}
+            />
+          )}
+
           <section
             className={classNames(
               'focus-card',
@@ -656,48 +689,23 @@ export function FoodView({
               <Icon name="plus" size={21} />
             </button>
           </section>
-          <div className="meal-list">
-            {todayData.meals.length === 0 ? (
-              <EmptyState
-                icon="utensils"
-                title="Tu registro empieza aquí"
-                description="Una frase sencilla es suficiente. No necesitas contar calorías."
-                actionLabel="Registrar comida"
-                onAction={onOpenMeal}
-              />
-            ) : (
-              todayData.meals.map(meal => (
+          {todayData.meals.length > 0 && (
+            <div className="meal-list">
+              {todayData.meals.map(meal => (
                 <MealRow key={meal.id} meal={meal} onDelete={onDeleteMeal} />
-              ))
-            )}
-          </div>
-          <button className="primary-button full-button" onClick={onOpenMeal}>
-            <Icon name="plus" size={18} /> Registrar comida
-          </button>
-          <section className="guide-teaser">
-            <div className="guide-teaser-icon">
-              <Icon name="leaf" size={20} />
+              ))}
             </div>
-            <div>
-              <p className="eyebrow">GUÍA GENERAL</p>
-              <h3>Ideas simples, sin reglas rígidas</h3>
-              <p>
-                Mientras llega tu cita con el nutriólogo, usa esto como
-                orientación general.
-              </p>
-            </div>
-            <button
-              className="icon-button soft-icon"
-              onClick={() => setTab('guia')}
-              aria-label="Abrir guía">
-              <Icon name="arrow" size={17} />
+          )}
+          {!showPlanChecklist && (
+            <button className="primary-button full-button" onClick={onOpenMeal}>
+              <Icon name="plus" size={18} /> Registrar comida
             </button>
-          </section>
+          )}
         </>
       ) : (
         <FoodGuide
           onPlanEntry={onPlanEntry}
-          activePlan={getActivePlanForDate(state.plans, today)}
+          activePlan={activePlan}
           today={today}
         />
       )}

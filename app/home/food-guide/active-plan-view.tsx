@@ -29,7 +29,6 @@ export function ActivePlanView({
 
   const selectDay = useCallback((dayType: DayType, weekday: Weekday) => {
     const params = new URLSearchParams(searchParams.toString());
-    params.set('variant', 'B');
     params.set('planMenu', dayType.id);
     params.set('planDay', String(weekday));
     params.delete('menu');

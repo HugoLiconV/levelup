@@ -8,6 +8,7 @@ import { useNotifications } from './useNotifications';
 import {
   createId,
   createSeedState,
+  deriveMealFromPlanSlot,
   getDayData,
   getJourneyDay,
   getJourneyStatus,
@@ -26,6 +27,7 @@ import {
   type LabCheckpoint,
   type Meal,
   type Plan,
+  type PlanSlot,
   type QuestId
 } from '../lib/levelup';
 import { getRequestedScreen, type ModalState, type Screen } from './shared';
@@ -212,10 +214,73 @@ export function useLevelUpApp() {
     apply(
       previous => ({
         ...previous,
-        meals: previous.meals.filter(meal => meal.id !== mealId)
+        meals: previous.meals.filter(meal => meal.id !== mealId),
+        planSlotCompletions: previous.planSlotCompletions.filter(
+          completion => completion.mealId !== mealId
+        )
       }),
       'Comida eliminada'
     );
+  };
+
+  const togglePlanSlot = (
+    planId: string,
+    dayTypeId: string,
+    slot: PlanSlot
+  ) => {
+    const existing = state.planSlotCompletions.find(
+      completion =>
+        completion.date === today &&
+        completion.planId === planId &&
+        completion.dayTypeId === dayTypeId &&
+        completion.slotId === slot.id
+    );
+
+    apply(previous => {
+      const completion = previous.planSlotCompletions.find(
+        item =>
+          item.date === today &&
+          item.planId === planId &&
+          item.dayTypeId === dayTypeId &&
+          item.slotId === slot.id
+      );
+      if (completion) {
+        return {
+          ...previous,
+          meals: previous.meals.filter(meal => meal.id !== completion.mealId),
+          planSlotCompletions: previous.planSlotCompletions.filter(
+            item => item.id !== completion.id
+          )
+        };
+      }
+
+      const createdAt = new Date().toISOString();
+      const mealId = createId('meal');
+      return {
+        ...previous,
+        meals: [
+          ...previous.meals,
+          {
+            ...deriveMealFromPlanSlot(slot),
+            id: mealId,
+            date: today,
+            createdAt
+          }
+        ],
+        planSlotCompletions: [
+          ...previous.planSlotCompletions,
+          {
+            id: createId('plan-slot-completion'),
+            date: today,
+            planId,
+            dayTypeId,
+            slotId: slot.id,
+            mealId,
+            completedAt: createdAt
+          }
+        ]
+      };
+    }, existing ? 'Comida del plan eliminada' : 'Comida del plan registrada · +5 XP');
   };
 
   const addExercise = (exercise: {
@@ -369,6 +434,7 @@ export function useLevelUpApp() {
     logWater,
     repeatRecentMeal,
     deleteMeal,
+    togglePlanSlot,
     addMeal,
     addExercise,
     saveLabs,

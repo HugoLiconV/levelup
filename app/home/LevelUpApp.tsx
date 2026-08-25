@@ -47,6 +47,7 @@ export default function LevelUpApp() {
     logWater,
     repeatRecentMeal,
     deleteMeal,
+    togglePlanSlot,
     openPlanEntry,
     updateSettings,
     toggleReminders,
@@ -126,6 +127,7 @@ export default function LevelUpApp() {
             onRepeatMeal={repeatRecentMeal}
             onPlanEntry={openPlanEntry}
             onDeleteMeal={deleteMeal}
+            onTogglePlanSlot={togglePlanSlot}
             onWater={logWater}
           />
         )}
