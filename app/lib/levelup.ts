@@ -8,6 +8,7 @@ export type MealTag =
   | "Legumbres"
   | "Pescado"
   | "Nueces y semillas"
+  | "Grasa insaturada"
   | "Bebida azucarada"
   | "Postre / azúcar añadida"
   | "Muy procesado"
@@ -284,24 +285,46 @@ export const LAB_METRICS: Array<{ id: LabMetric; label: string; shortLabel: stri
   { id: "totalCholesterol", label: "Colesterol total", shortLabel: "Total", unit: "mg/dL" },
 ];
 
-export const MEAL_TAGS: MealTag[] = [
-  "Proteína",
-  "Verduras",
-  "Fruta",
-  "Grano integral",
-  "Legumbres",
-  "Pescado",
-  "Nueces y semillas",
-  "Bebida azucarada",
-  "Postre / azúcar añadida",
-  "Muy procesado",
-  "Carne procesada",
-  "Alcohol",
-  "Lácteos",
-  "Huevo",
-  "Frito",
-  "Grano refinado",
+export const MEAL_TAG_GROUPS: Array<{
+  label: string;
+  tags: MealTag[];
+}> = [
+  {
+    label: "Fuentes y grupos",
+    tags: [
+      "Proteína",
+      "Verduras",
+      "Fruta",
+      "Grano integral",
+      "Legumbres",
+      "Pescado",
+      "Nueces y semillas",
+      "Grasa insaturada",
+      "Lácteos",
+      "Huevo",
+    ],
+  },
+  {
+    label: "Preparación y consumo ocasional",
+    tags: [
+      "Grano refinado",
+      "Frito",
+      "Bebida azucarada",
+      "Postre / azúcar añadida",
+      "Muy procesado",
+      "Carne procesada",
+      "Alcohol",
+    ],
+  },
 ];
+
+export const MEAL_TAGS: MealTag[] = MEAL_TAG_GROUPS.flatMap(
+  group => group.tags
+);
+
+export function getMealTagLabel(tag: MealTag): string {
+  return tag === "Fruta" ? "Fruta entera" : tag;
+}
 
 export const ACHIEVEMENT_META: Record<AchievementId, { title: string; description: string; icon: string }> = {
   firstStep: { title: "Primer paso", description: "Registraste tu primera actividad.", icon: "footprints" },

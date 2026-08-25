@@ -2,11 +2,14 @@ import { describe, expect, it } from 'vitest';
 import {
   createSeedState,
   deriveMealFromPlanSlot,
+  getMealTagLabel,
   getDailyXp,
   getDayData,
   getActivePlanForDate,
   getDayTypeForDate,
   getWeeklyShoppingList,
+  MEAL_TAG_GROUPS,
+  MEAL_TAGS,
   type Plan,
   type PlanDish,
   type PlanIngredient,
@@ -14,6 +17,21 @@ import {
   type PlanSupplement,
   type Weekday
 } from './levelup';
+
+describe('meal tag taxonomy', () => {
+  it('keeps every selectable tag in exactly one visible group', () => {
+    const groupedTags = MEAL_TAG_GROUPS.flatMap(group => group.tags);
+
+    expect(groupedTags).toEqual(MEAL_TAGS);
+    expect(new Set(groupedTags).size).toBe(groupedTags.length);
+    expect(groupedTags).toContain('Alcohol');
+    expect(groupedTags).toContain('Grasa insaturada');
+  });
+
+  it('presents the persisted fruit tag as whole fruit', () => {
+    expect(getMealTagLabel('Fruta')).toBe('Fruta entera');
+  });
+});
 
 function ingredient(
   name: string,

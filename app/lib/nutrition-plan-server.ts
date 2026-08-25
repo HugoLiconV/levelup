@@ -23,7 +23,7 @@ Reglas importantes:
 - Usa references para instrucciones como agua al despertar, agua a medio día u otras notas que no deben crear una comida rastreable. No las conviertas en slots.
 - Un slot debe representar una comida que la persona pueda marcar, como Desayuno, Comida, Cena o Media tarde.
 - Agrupa todos los platillos que pertenecen a la misma comida bajo un solo slot. No repitas un slot con el mismo nombre para cada platillo.
-- Deriva solo las etiquetas claramente implicadas por el nombre o la descripción del platillo. Usa exclusivamente esta lista: ${MEAL_TAGS.join(", ")}.
+- Deriva solo las etiquetas claramente implicadas por el nombre, la descripción o los ingredientes del platillo. Usa exclusivamente esta lista: ${MEAL_TAGS.join(", ")}. Usa "Grasa insaturada" para aguacate, aceite de oliva, nueces o semillas; usa "Fruta" solo para fruta entera o en trozos, no para jugos.
 - Si el menú contiene una sola variante para todos los días, crea un solo day-type con weekdays [0,1,2,3,4,5,6]. Si menciona dos o más variantes, asígnales los weekdays indicados.
 - No inventes ingredientes, cantidades, suplementos ni días que no estén en el texto. Si algo no está claro, consérvalo en el texto visible y deja el dato derivado en null.
 - Responde los nombres y textos en el idioma predominante del menú; si mezcla idiomas, conserva cada elemento en su idioma original.

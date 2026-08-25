@@ -40,7 +40,7 @@ Modelo predeterminado: `gpt-4.1-nano`.
 
 ### 2. Clasificador de comidas
 
-Al registrar una comida libre, LevelUp analiza su descripción y sugiere etiquetas relevantes como proteína, verduras, fruta, pescado o alimentos ultraprocesados. Estas etiquetas alimentan las métricas y quests del producto, y el usuario puede revisarlas o cambiarlas.
+Al registrar una comida libre, LevelUp analiza su descripción y sugiere etiquetas agrupadas como proteína, verduras, fruta entera, grasa insaturada, pescado, alimentos ultraprocesados o alcohol. Estas etiquetas alimentan las métricas y quests del producto, y el usuario puede revisarlas o cambiarlas.
 
 Modelo predeterminado: `gpt-4.1-nano`.
 
@@ -50,8 +50,8 @@ La demostración principal toma aproximadamente un minuto:
 
 1. Abrir [levelup-murex.vercel.app](https://levelup-murex.vercel.app/) e iniciar sesión.
 2. Entrar a la sección **Comida** desde la navegación inferior.
-3. Seleccionar **Pegar menú**.
-4. Copiar el menú de prueba incluido abajo y seleccionar **Crear borrador**.
+3. Seleccionar **Pegar mi menú**.
+4. Seleccionar **Usar menú de demostración** y después **Analizar menú con IA**.
 5. Revisar las variantes y los días detectados por la IA.
 6. Avanzar por **Calendario**, **Comidas** y **Suplementos**. Todos los campos son editables.
 7. Seleccionar **Guardar nueva versión**.
@@ -62,7 +62,7 @@ La demostración principal toma aproximadamente un minuto:
 
 > Este es el menú completo de demostración usado por el proyecto. No contiene datos de identificación personal y puede copiarse directamente en la aplicación.
 
-Copiar todo el contenido del siguiente bloque en **Comida → Pegar menú**:
+El mismo contenido se carga automáticamente con **Usar menú de demostración**. También puede copiarse manualmente en **Comida → Pegar mi menú**:
 
 ```text
 PLAN DE ALIMENTACIÓN

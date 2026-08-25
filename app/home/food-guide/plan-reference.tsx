@@ -9,7 +9,7 @@ export function PlanHeader({ plan, onPlanEntry }: { plan: Plan; onPlanEntry: () 
         <h2>Plan de tu nutriólogo</h2>
       </div>
       <button className="secondary-button" type="button" onClick={onPlanEntry}>
-        <Icon name="plus" size={15} /> Nuevo plan
+        <Icon name="sparkles" size={15} /> Interpretar otro menú con IA
       </button>
     </header>
   );

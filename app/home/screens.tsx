@@ -13,6 +13,7 @@ import {
   formatLongDate,
   formatShortDate,
   formatWeekday,
+  getMealTagLabel,
   getComparison,
   getDailyXp,
   getDayData,
@@ -792,7 +793,7 @@ function MealRow({
           <div className="tag-list">
             {meal.tags.slice(0, 4).map(tag => (
               <span key={tag} className="tag-chip">
-                {tag}
+                {getMealTagLabel(tag)}
               </span>
             ))}
           </div>
@@ -828,7 +829,7 @@ function FoodGuide({
           <h3>¿Ya tienes un menú nuevo?</h3>
           <p>Pégalo y revisa el borrador antes de guardarlo como una nueva versión.</p>
         </div>
-        <button className="primary-button" onClick={onPlanEntry}>Pegar menú</button>
+        <button className="primary-button" onClick={onPlanEntry}>Pegar mi menú</button>
       </div>
     </div>
   );
@@ -1339,7 +1340,7 @@ function FoodPatternsSection({
         <div className="pattern-list">
           {patterns.map(pattern => (
             <div className="pattern-row" key={pattern.tag}>
-              <span>{pattern.tag}</span>
+              <span>{getMealTagLabel(pattern.tag)}</span>
               <div className="bar-track">
                 <i style={{ width: `${(pattern.count / max) * 100}%` }} />
               </div>

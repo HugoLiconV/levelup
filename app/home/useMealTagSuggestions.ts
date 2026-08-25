@@ -53,6 +53,7 @@ export function useMealTagSuggestions({
 
   useEffect(() => {
     if (debounceRef.current) window.clearTimeout(debounceRef.current);
+    abortRef.current?.abort();
     firedRef.current = false;
     const text = description.trim();
     if (text.length < 8 || text === suggestedForRef.current) return;

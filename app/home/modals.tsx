@@ -4,7 +4,8 @@ import { useEffect, useState, type FormEvent, type ReactNode } from 'react';
 import { Icon } from '../components/Icons';
 import {
   LAB_METRICS,
-  MEAL_TAGS,
+  MEAL_TAG_GROUPS,
+  getMealTagLabel,
   type ExerciseType,
   type ImplementationIntention,
   type LabCheckpoint,
@@ -112,10 +113,14 @@ export function MealModal({
   );
   const [description, setDescription] = useState(meal?.description ?? '');
   const [tags, setTags] = useState<MealTag[]>(meal?.tags ?? []);
+  const [aiSuggestedTags, setAiSuggestedTags] = useState<MealTag[]>([]);
+  const [suggestionCompleted, setSuggestionCompleted] = useState(false);
   const [manuallyToggled, setManuallyToggled] = useState<Set<MealTag>>(
     new Set()
   );
   const applySuggestion = (suggested: MealTag[]) => {
+    setAiSuggestedTags(suggested);
+    setSuggestionCompleted(true);
     setTags(current => {
       const kept = current.filter(item => manuallyToggled.has(item));
       const added = suggested.filter(item => !manuallyToggled.has(item));
@@ -130,6 +135,13 @@ export function MealModal({
 
   const handleDescriptionChange = (value: string) => {
     setDescription(value);
+    setTags(current =>
+      current.filter(
+        tag => !aiSuggestedTags.includes(tag) || manuallyToggled.has(tag)
+      )
+    );
+    setAiSuggestedTags([]);
+    setSuggestionCompleted(false);
     setManuallyToggled(new Set());
   };
 
@@ -185,29 +197,67 @@ export function MealModal({
           />
         </div>
         <div className="field">
-          <label>
-            Etiquetas rápidas <small>(opcional)</small>
-            {suggesting && (
-              <span className="ai-suggesting">
-                <Icon name="sparkles" size={12} /> Sugerido por IA…
-              </span>
-            )}
-          </label>
-          <div className="tag-picker">
-            {MEAL_TAGS.map(tag => (
+          <div className="meal-tag-heading">
+            <label>
+              Etiquetas rápidas <small>(opcional)</small>
+            </label>
+            {!suggestionCompleted && (
               <button
                 type="button"
-                key={tag}
                 className={classNames(
-                  'tag-option',
-                  tags.includes(tag) && 'selected',
-                  tags.includes(tag) &&
-                    !manuallyToggled.has(tag) &&
-                    'ai-suggested'
+                  'ai-tag-trigger',
+                  suggesting && 'loading'
                 )}
-                onClick={() => toggleTag(tag)}>
-                {tag}
+                onClick={requestSuggestion}
+                disabled={description.trim().length < 8 || suggesting}>
+                <Icon name="sparkles" size={13} />
+                {suggesting
+                  ? 'Analizando comida…'
+                  : 'Sugerir etiquetas con IA'}
               </button>
+            )}
+          </div>
+          {suggestionCompleted && (
+            <div className="ai-tag-result" role="status" aria-live="polite">
+              <Icon name="sparkles" size={14} />
+              <span>
+                {aiSuggestedTags.length > 0
+                  ? `IA sugirió ${aiSuggestedTags.length} ${
+                      aiSuggestedTags.length === 1 ? 'etiqueta' : 'etiquetas'
+                    }`
+                  : 'IA revisó esta comida'}
+                <small> · puedes cambiar la selección</small>
+              </span>
+            </div>
+          )}
+          <div className="tag-picker-groups">
+            {MEAL_TAG_GROUPS.map(group => (
+              <div className="tag-picker-group" key={group.label}>
+                <span>{group.label}</span>
+                <div className="tag-picker">
+                  {group.tags.map(tag => (
+                    <button
+                      type="button"
+                      key={tag}
+                      className={classNames(
+                        'tag-option',
+                        tags.includes(tag) && 'selected',
+                        aiSuggestedTags.includes(tag) &&
+                          tags.includes(tag) &&
+                          !manuallyToggled.has(tag) &&
+                          'ai-suggested'
+                      )}
+                      onClick={() => toggleTag(tag)}>
+                      {aiSuggestedTags.includes(tag) &&
+                        tags.includes(tag) &&
+                        !manuallyToggled.has(tag) && (
+                          <Icon name="sparkles" size={10} />
+                        )}
+                      {getMealTagLabel(tag)}
+                    </button>
+                  ))}
+                </div>
+              </div>
             ))}
           </div>
         </div>

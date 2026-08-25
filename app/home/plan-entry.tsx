@@ -2,10 +2,12 @@
 
 import { useEffect, useRef, useState, type FormEvent } from 'react';
 import { Icon } from '../components/Icons';
+import { DEMO_NUTRITION_MENU } from '../lib/demo-menu';
 import {
   createId,
   getToday,
-  MEAL_TAGS,
+  getMealTagLabel,
+  MEAL_TAG_GROUPS,
   type DayType,
   type Plan,
   type PlanDish,
@@ -458,6 +460,7 @@ export function PlanEntryScreen({
   const menuTextLength = rawText.trim().length;
   const menuTextIsTooShort = menuTextLength > 0 && menuTextLength < MIN_MENU_TEXT_LENGTH;
   const pasteSubmitDisabled = busy || menuTextLength < MIN_MENU_TEXT_LENGTH;
+  const demoMenuLoaded = rawText === DEMO_NUTRITION_MENU;
   const screenTitle = busy
     ? 'Estamos creando tu borrador'
     : stage === 'paste'
@@ -472,7 +475,7 @@ export function PlanEntryScreen({
   return (
     <main className="plan-entry-screen" aria-labelledby="plan-entry-title" aria-busy={busy}>
       <div className="plan-entry-screen-shell">
-        <FlowTopBar title="Agregar menú" onExit={requestExit} />
+        <FlowTopBar title="Crear plan con IA" onExit={requestExit} />
         <div className="plan-entry-screen-heading">
           {screenEyebrow && <p className="eyebrow">{screenEyebrow}</p>}
           <h1 id="plan-entry-title" tabIndex={-1}>{screenTitle}</h1>
@@ -489,6 +492,24 @@ export function PlanEntryScreen({
             aria-busy={busy}
             onSubmit={parse}>
             <div className="plan-entry-body plan-paste-body">
+              <div className="demo-menu-callout">
+                <span className="demo-menu-icon"><Icon name="sparkles" size={17} /></span>
+                <div>
+                  <strong>Prueba la experiencia completa</strong>
+                  <p>Carga un menú de demostración con dos variantes, cantidades y suplementos.</p>
+                </div>
+                <button
+                  type="button"
+                  className="secondary-button demo-menu-button"
+                  disabled={demoMenuLoaded}
+                  onClick={() => {
+                    setRawText(DEMO_NUTRITION_MENU);
+                    setError(null);
+                  }}>
+                  {demoMenuLoaded ? <Icon name="check" size={14} /> : <Icon name="plus" size={14} />}
+                  {demoMenuLoaded ? 'Menú cargado' : 'Usar menú de demostración'}
+                </button>
+              </div>
               <div className="field">
                 <label htmlFor="nutrition-plan-source">Menú completo <small>(obligatorio)</small></label>
                 <textarea
@@ -524,8 +545,8 @@ export function PlanEntryScreen({
                 aria-disabled={pasteSubmitDisabled}
                 aria-busy={busy}
                 aria-describedby="nutrition-plan-source-length"
-                aria-label={busy ? 'Creando borrador' : 'Crear borrador'}>
-                <Icon name="sparkles" size={15} /> {busy ? 'Creando borrador…' : 'Crear borrador'}
+                aria-label={busy ? 'Analizando menú con IA' : 'Analizar menú con IA'}>
+                <Icon name="sparkles" size={15} /> {busy ? 'Analizando menú…' : 'Analizar menú con IA'}
               </button>
             </FlowActionBar>
           </form>
@@ -952,11 +973,18 @@ function DishDetailEditor({
       </div>
       <details className="plan-collapsible plan-tags-details">
         <summary>Etiquetas opcionales <span>{dish.tags.length || 'Ninguna'}</span></summary>
-        <div className="tag-picker plan-tag-picker">
-          {MEAL_TAGS.map(tag => {
-            const selected = dish.tags.includes(tag);
-            return <button type="button" key={tag} className={classNames('tag-option', selected && 'selected')} onClick={() => onChange(current => ({ ...current, tags: selected ? current.tags.filter(item => item !== tag) : [...current.tags, tag] }))}>{tag}</button>;
-          })}
+        <div className="tag-picker-groups plan-tag-picker">
+          {MEAL_TAG_GROUPS.map(group => (
+            <div className="tag-picker-group" key={group.label}>
+              <span>{group.label}</span>
+              <div className="tag-picker">
+                {group.tags.map(tag => {
+                  const selected = dish.tags.includes(tag);
+                  return <button type="button" key={tag} className={classNames('tag-option', selected && 'selected')} onClick={() => onChange(current => ({ ...current, tags: selected ? current.tags.filter(item => item !== tag) : [...current.tags, tag] }))}>{getMealTagLabel(tag)}</button>;
+                })}
+              </div>
+            </div>
+          ))}
         </div>
       </details>
       <div className="plan-ingredient-detail-list">

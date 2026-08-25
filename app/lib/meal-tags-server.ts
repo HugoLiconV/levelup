@@ -6,12 +6,13 @@ const SYSTEM_PROMPT = `Eres un clasificador de comidas para una app de salud en 
 
 - Proteína: carne, pollo, pescado, huevo, tofu u otra fuente principal de proteína.
 - Verduras: incluye verduras o vegetales.
-- Fruta: incluye fruta entera o en trozos.
+- Fruta: incluye fruta entera o en trozos; no incluye jugos.
 - Grano integral: arroz integral, avena, pan integral u otro grano sin refinar.
 - Grano refinado: pan blanco, arroz blanco, pasta refinada u otro carbohidrato refinado (opuesto a Grano integral).
 - Legumbres: frijoles, lentejas, garbanzos u otras legumbres.
 - Pescado: incluye pescado o mariscos.
 - Nueces y semillas: incluye nueces, almendras, semillas, cacahuates, etc.
+- Grasa insaturada: incluye aguacate, aceite de oliva u otra fuente claramente identificable de grasa insaturada.
 - Lácteos: incluye leche, queso, yogur u otro lácteo.
 - Huevo: incluye huevo.
 - Frito: el platillo está frito o capeado.
