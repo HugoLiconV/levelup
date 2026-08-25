@@ -233,12 +233,14 @@ function updateIngredient(
 
 export function PlanEntryScreen({
   onClose,
-  onSave
+  onSave,
+  onViewToday
 }: {
   onClose: () => void;
   onSave: (plan: PlanToSave) => void;
+  onViewToday: () => void;
 }) {
-  const [stage, setStage] = useState<'paste' | 'review'>('paste');
+  const [stage, setStage] = useState<'paste' | 'review' | 'success'>('paste');
   const [reviewStep, setReviewStep] = useState<ReviewStep>('schedule');
   const [rawText, setRawText] = useState('');
   const [startDate, setStartDate] = useState(getToday());
@@ -256,7 +258,8 @@ export function PlanEntryScreen({
   const closingRef = useRef(false);
   const flowHistoryActiveRef = useRef(false);
   const stepIndex = reviewSteps.findIndex(item => item.id === reviewStep);
-  const hasUnsavedWork = rawText.trim().length > 0 || draft !== null;
+  const hasUnsavedWork =
+    stage !== 'success' && (rawText.trim().length > 0 || draft !== null);
 
   const closeFlowHistory = () => {
     closingRef.current = true;
@@ -390,6 +393,8 @@ export function PlanEntryScreen({
     };
     closeFlowHistory();
     onSave(plan);
+    setError(null);
+    setStage('success');
   };
 
   const invalidateLaterSteps = () => {
@@ -463,11 +468,15 @@ export function PlanEntryScreen({
   const demoMenuLoaded = rawText === DEMO_NUTRITION_MENU;
   const screenTitle = busy
     ? 'Estamos creando tu borrador'
+    : stage === 'success'
+      ? 'Tu plan ya está listo'
     : stage === 'paste'
       ? 'Pega tu menú'
       : stepMeta.title;
   const screenEyebrow = busy
     ? 'UN MOMENTO'
+    : stage === 'success'
+      ? 'PLAN GUARDADO'
     : stage === 'paste'
       ? null
       : `REVISIÓN GUIADA · ${stepIndex + 1} DE ${reviewSteps.length}`;
@@ -475,14 +484,16 @@ export function PlanEntryScreen({
   return (
     <main className="plan-entry-screen" aria-labelledby="plan-entry-title" aria-busy={busy}>
       <div className="plan-entry-screen-shell">
-        <FlowTopBar title="Crear plan con IA" onExit={requestExit} />
+        <FlowTopBar title={stage === 'success' ? 'Plan listo' : 'Crear plan con IA'} onExit={requestExit} />
         <div className="plan-entry-screen-heading">
           {screenEyebrow && <p className="eyebrow">{screenEyebrow}</p>}
           <h1 id="plan-entry-title" tabIndex={-1}>{screenTitle}</h1>
-          <p id={stage === 'paste' ? 'plan-paste-form-description' : undefined}>{busy ? 'Estamos identificando tus días, comidas, cantidades y suplementos.' : stage === 'paste' ? 'La IA creará un borrador editable para que lo revises antes de guardarlo.' : 'Avanza con calma. Puedes volver a cualquier paso antes de guardar.'}</p>
+          <p id={stage === 'paste' ? 'plan-paste-form-description' : undefined}>{busy ? 'Estamos identificando tus días, comidas, cantidades y suplementos.' : stage === 'success' ? 'La IA convirtió tu menú en acciones diarias y guardamos tu revisión como una nueva versión.' : stage === 'paste' ? 'La IA creará un borrador editable para que lo revises antes de guardarlo.' : 'Avanza con calma. Puedes volver a cualquier paso antes de guardar.'}</p>
         </div>
 
-        {stage === 'paste' && busy ? (
+        {stage === 'success' && draft ? (
+          <PlanSaveSuccess draft={draft} onViewToday={onViewToday} />
+        ) : stage === 'paste' && busy ? (
           <InterpretationLoading />
         ) : stage === 'paste' ? (
           <form
@@ -667,6 +678,66 @@ export function PlanEntryScreen({
         />
       )}
     </main>
+  );
+}
+
+function PlanSaveSuccess({
+  draft,
+  onViewToday
+}: {
+  draft: PlanDraft;
+  onViewToday: () => void;
+}) {
+  const metrics = [
+    { value: draft.dayTypes.length, label: 'variantes' },
+    { value: countSlots(draft), label: 'comidas' },
+    { value: countDishes(draft), label: 'platillos' },
+    { value: draft.supplements.length, label: 'suplementos' }
+  ];
+
+  return (
+    <section className="plan-success" aria-labelledby="plan-success-heading">
+      <div className="plan-success-card">
+        <span className="plan-success-mark" aria-hidden="true">
+          <Icon name="check" size={30} />
+        </span>
+        <div>
+          <p className="eyebrow">NUEVA VERSIÓN CREADA</p>
+          <h2 id="plan-success-heading">Tu menú ya trabaja para ti</h2>
+          <p>
+            Conservamos tus días, cantidades y suplementos en una versión
+            editable. Tus versiones anteriores siguen intactas.
+          </p>
+        </div>
+      </div>
+
+      <div className="plan-success-metrics" aria-label="Resumen del plan creado">
+        {metrics.map(metric => (
+          <div key={metric.label}>
+            <strong>{metric.value}</strong>
+            <span>{metric.label}</span>
+          </div>
+        ))}
+      </div>
+
+      <div className="plan-success-next">
+        <span><Icon name="sparkles" size={18} /></span>
+        <div>
+          <strong>Todo listo para hoy</strong>
+          <p>Consulta lo que te corresponde y marca cada comida conforme avances.</p>
+        </div>
+      </div>
+
+      <button
+        type="button"
+        className="primary-button plan-success-action"
+        onClick={onViewToday}>
+        Ver mi plan de hoy <Icon name="arrow" size={16} />
+      </button>
+      <small className="plan-success-note">
+        LevelUp organizó tu menú; no modificó las indicaciones de tu profesional.
+      </small>
+    </section>
   );
 }
 

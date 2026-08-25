@@ -95,6 +95,10 @@ export default function LevelUpApp() {
         <PlanEntryScreen
           onClose={() => setModal(null)}
           onSave={savePlan}
+          onViewToday={() => {
+            navigate('food');
+            setModal(null);
+          }}
         />
       ) : (
         <>

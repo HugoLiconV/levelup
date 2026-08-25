@@ -362,10 +362,8 @@ export function useLevelUpApp() {
       }))
     };
     apply(
-      previous => ({ ...previous, plans: [...previous.plans, savedPlan] }),
-      'Nueva versión del plan guardada'
+      previous => ({ ...previous, plans: [...previous.plans, savedPlan] })
     );
-    setModal(null);
   };
 
   const saveIntention = (intention: ImplementationIntention) => {
