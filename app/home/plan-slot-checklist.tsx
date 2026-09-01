@@ -12,12 +12,14 @@ export function PlanSlotChecklist({
   dayType,
   completedSlotIds,
   onToggle,
-  onOpenMeal
+  onOpenMeal,
+  operationalBySlot = {}
 }: {
   dayType: DayType;
   completedSlotIds: Set<string>;
   onToggle: (slot: PlanSlot) => void;
   onOpenMeal: () => void;
+  operationalBySlot?: Record<string, { label: string; detail: string }>;
 }) {
   return (
     <section className="plan-slot-checklist" aria-label="Plan de comidas de hoy">
@@ -31,6 +33,7 @@ export function PlanSlotChecklist({
       <div className="plan-slot-list">
         {dayType.slots.map(slot => {
           const checked = completedSlotIds.has(slot.id);
+          const operational = operationalBySlot[slot.id];
           return (
             <button
               type="button"
@@ -44,8 +47,9 @@ export function PlanSlotChecklist({
               <span className="plan-slot-copy">
                 <strong>{slot.name}</strong>
                 <small>{getSlotDescription(slot)}</small>
+                {operational && <small className="plan-slot-operational">{operational.detail}</small>}
               </span>
-              <small>{checked ? 'Registrada' : 'Toca para registrar'}</small>
+              <small>{checked ? 'Registrada' : operational?.label ?? 'Toca para registrar'}</small>
             </button>
           );
         })}

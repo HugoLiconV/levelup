@@ -8,6 +8,7 @@ import {
   getActivePlanForDate,
   getDayTypeForDate,
   getWeeklyShoppingList,
+  getWeeklyShoppingListForPlans,
   MEAL_TAG_GROUPS,
   MEAL_TAGS,
   type Plan,
@@ -298,6 +299,21 @@ describe('Plan supplement tracking', () => {
 });
 
 describe('weekly Shopping List aggregation', () => {
+  it('treats a single incomplete day-type assignment as daily coverage', () => {
+    const singleVariantPlan: Plan = {
+      ...menuPlan,
+      dayTypes: [{ ...mondayWednesdayFridaySunday, weekdays: [1] }]
+    };
+
+    const shoppingList = getWeeklyShoppingListForPlans([singleVariantPlan], '2026-08-10');
+
+    expect(shoppingList.items.find(item => item.name.startsWith('Espinaca'))).toEqual({
+      name: 'Espinaca, cruda',
+      amount: 420,
+      unit: 'g'
+    });
+  });
+
   it('sums the real menu quantities by normalized ingredient and day-type frequency', () => {
     const shoppingList = getWeeklyShoppingList(menuPlan, '2026-08-10');
 

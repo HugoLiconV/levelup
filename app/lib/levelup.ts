@@ -162,7 +162,7 @@ export interface PlanSupplementLog {
 }
 
 export interface ShoppingListState {
-  bought: Record<string, boolean>;
+  boughtByWeek: Record<string, Record<string, boolean>>;
 }
 
 export interface ShoppingListItem {
@@ -243,7 +243,7 @@ export interface ImplementationIntention {
 }
 
 export interface AppState {
-  version: 1;
+  version: 2;
   protectedXp: number;
   settings: AppSettings;
   meals: Meal[];
@@ -260,6 +260,106 @@ export interface AppState {
   planSlotCompletions: PlanSlotCompletion[];
   planSupplementLogs: PlanSupplementLog[];
   shoppingListState: ShoppingListState;
+  mealPrepPlans: MealPrepPlan[];
+  prepTaskCompletions: PrepTaskCompletion[];
+}
+
+export type PrepStyle = 'balanced' | 'maximum_ready' | 'minimum_time';
+export type PrepStorage = 'refrigerator' | 'freezer' | 'fresh';
+export type PrepProvenance = 'plan' | 'ai_suggestion' | 'safety_rule';
+export type PrepTaskKind = 'wash' | 'cut' | 'cook' | 'cool' | 'portion' | 'label' | 'store' | 'clean';
+
+export interface MealPrepPreferences {
+  style: PrepStyle;
+  freezerAvailable: boolean;
+  equipment: string[];
+  sessions: Array<{ scheduledFor: string; maxMinutes: number }>;
+}
+
+export interface PrepTask {
+  id: string;
+  kind: PrepTaskKind;
+  instruction: string;
+  estimatedMinutes: number;
+  dependencyIds: string[];
+  sourceDishRefs: string[];
+  sourceIngredientRefs: string[];
+  equipment: string[];
+  provenance: PrepProvenance;
+}
+
+export interface PrepSession {
+  id: string;
+  scheduledFor: string;
+  estimatedMinutes: number;
+  taskIds: string[];
+}
+
+export interface PrepBatch {
+  id: string;
+  kind: 'dish' | 'component';
+  label: string;
+  sourceDishRefs: string[];
+  sourceIngredientRefs: string[];
+  portionIds: string[];
+  quantityDisplay: string;
+}
+
+export interface PrepPortion {
+  id: string;
+  occurrenceId: string;
+  batchId: string | null;
+  date: string;
+  planId: string;
+  dayTypeId: string;
+  slotId: string;
+  storage: PrepStorage;
+  preparedAt: string | null;
+  consumeBy: string | null;
+  thawAt: string | null;
+  finishInstruction: string | null;
+}
+
+export interface FinishStep {
+  id: string;
+  occurrenceId: string;
+  date: string;
+  slotId: string;
+  instruction: string;
+  provenance: PrepProvenance;
+}
+
+export interface PrepAssumption {
+  id: string;
+  text: string;
+  provenance: PrepProvenance;
+}
+
+export interface MealPrepPlan {
+  id: string;
+  weekStart: string;
+  version: number;
+  status: 'draft' | 'ready' | 'in_progress' | 'complete' | 'superseded';
+  planRefs: Array<{ planId: string; dates: string[] }>;
+  sourceFingerprint: string;
+  selectedOccurrenceIds: string[];
+  preferences: MealPrepPreferences;
+  sessions: PrepSession[];
+  tasks: PrepTask[];
+  batches: PrepBatch[];
+  portions: PrepPortion[];
+  finishSteps: FinishStep[];
+  assumptions: PrepAssumption[];
+  generatedAt: string;
+  acceptedAt: string | null;
+  generatorVersion: string;
+  safetyPolicyVersion: string;
+}
+
+export interface PrepTaskCompletion {
+  mealPrepPlanId: string;
+  prepTaskId: string;
+  completedAt: string;
 }
 
 export const STORAGE_KEY = "levelup-local-state-v1";
@@ -430,7 +530,15 @@ export function getActivePlanForDate(plans: Plan[], date: string): Plan | null {
 
 export function getDayTypeForDate(plan: Plan, date: string): DayType | null {
   const weekday = getWeekday(date);
-  return plan.dayTypes.find(dayType => dayType.weekdays.includes(weekday)) ?? null;
+  const matchingDayType = plan.dayTypes.find(dayType => dayType.weekdays.includes(weekday));
+  if (matchingDayType) return matchingDayType;
+
+  // A Plan with one variant is the common "same menu every day" shape. Older
+  // or AI-created Plans can incorrectly assign that variant to only one day;
+  // keep the weekly menu usable instead of silently dropping six days.
+  return plan.dayTypes.length === 1 && plan.dayTypes[0].weekdays.length > 0
+    ? plan.dayTypes[0]
+    : null;
 }
 
 function normalizeText(value: string): string {
@@ -519,6 +627,33 @@ export function getWeeklyShoppingList(plan: Plan, weekStart: string): WeeklyShop
     }
   }
 
+  return { items: Array.from(items.values()), unquantified };
+}
+
+export function getWeeklyShoppingListForPlans(plans: Plan[], weekStart: string): WeeklyShoppingList {
+  const items = new Map<string, ShoppingListItem>();
+  const unquantified: UnquantifiedShoppingListItem[] = [];
+  for (const date of getDateRange(weekStart, 7)) {
+    const plan = getActivePlanForDate(plans, date);
+    if (!plan) continue;
+    const dayType = getDayTypeForDate(plan, date);
+    if (!dayType) continue;
+    for (const slot of dayType.slots) {
+      for (const dish of slot.dishes) {
+        for (const ingredient of dish.ingredients) {
+          const name = getShoppingIngredientName(ingredient.name);
+          if (ingredient.grams === null || ingredient.unit === null) {
+            unquantified.push({ name, quantityText: ingredient.quantityText, date, dayTypeId: dayType.id, slotId: slot.id, dishName: dish.name });
+            continue;
+          }
+          const key = `${name.toLocaleLowerCase('es-MX')}|${ingredient.unit}`;
+          const existing = items.get(key);
+          if (existing) existing.amount += ingredient.grams;
+          else items.set(key, { name, amount: ingredient.grams, unit: ingredient.unit });
+        }
+      }
+    }
+  }
   return { items: Array.from(items.values()), unquantified };
 }
 
@@ -723,7 +858,7 @@ export function createSeedState(options: SeedStateOptions = {}): AppState {
   const labWindowDate = personalMode ? "2026-11-06" : appointmentDate;
 
   return {
-    version: 1,
+    version: 2,
     protectedXp: 0,
     settings: {
       name: "",
@@ -754,7 +889,9 @@ export function createSeedState(options: SeedStateOptions = {}): AppState {
     plans: [],
     planSlotCompletions: [],
     planSupplementLogs: [],
-    shoppingListState: { bought: {} },
+    shoppingListState: { boughtByWeek: {} },
+    mealPrepPlans: [],
+    prepTaskCompletions: [],
     intentions: personalMode
       ? [
           { id: "lunch-walk", ifText: "Termino de comer", thenText: "caminaré 5–10 minutos." },
@@ -814,13 +951,13 @@ export function loadState(options: SeedStateOptions = {}): AppState {
       planSlotCompletions: Array.isArray(parsed.planSlotCompletions) ? parsed.planSlotCompletions : seed.planSlotCompletions,
       planSupplementLogs: Array.isArray(parsed.planSupplementLogs) ? parsed.planSupplementLogs : migratedSupplementLogs,
       shoppingListState: {
-        ...seed.shoppingListState,
-        ...(parsed.shoppingListState ?? {}),
-        bought: {
-          ...seed.shoppingListState.bought,
-          ...(parsed.shoppingListState?.bought ?? {})
-        }
+        boughtByWeek: parsed.shoppingListState && 'boughtByWeek' in parsed.shoppingListState
+          ? parsed.shoppingListState.boughtByWeek ?? {}
+          : { legacy: (parsed.shoppingListState as unknown as { bought?: Record<string, boolean> } | undefined)?.bought ?? {} }
       },
+      mealPrepPlans: Array.isArray(parsed.mealPrepPlans) ? parsed.mealPrepPlans : [],
+      prepTaskCompletions: Array.isArray(parsed.prepTaskCompletions) ? parsed.prepTaskCompletions : [],
+      version: 2,
     } as AppState;
   } catch {
     return createSeedState(options);

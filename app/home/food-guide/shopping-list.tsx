@@ -2,7 +2,7 @@
 
 import { Icon } from '../../components/Icons';
 import {
-  getWeeklyShoppingList,
+  getWeeklyShoppingListForPlans,
   type Plan,
   type ShoppingListItem,
   type UnquantifiedShoppingListItem
@@ -16,23 +16,23 @@ interface ShoppingRow {
 }
 
 export function WeeklyShoppingList({
-  plan,
+  plans,
   weekStart,
   bought,
   onToggle,
   onClear,
   onPlanEntry
 }: {
-  plan: Plan | null;
+  plans: Plan[];
   weekStart: string;
   bought: Record<string, boolean>;
   onToggle: (key: string) => void;
   onClear: () => void;
   onPlanEntry: () => void;
 }) {
-  if (!plan) return <NoActivePlan onPlanEntry={onPlanEntry} />;
+  if (plans.length === 0) return <NoActivePlan onPlanEntry={onPlanEntry} />;
 
-  const list = getWeeklyShoppingList(plan, weekStart);
+  const list = getWeeklyShoppingListForPlans(plans, weekStart);
   const rows = buildShoppingRows(list.items, list.unquantified);
   if (rows.length === 0) return <NoShoppingItems onPlanEntry={onPlanEntry} />;
 
@@ -52,7 +52,7 @@ export function WeeklyShoppingList({
         <div>
           <p className="eyebrow">SEMANA ACTUAL</p>
           <h2>Lista de compras</h2>
-          <p>Calculada a partir de tu plan activo.</p>
+          <p>Resuelta por fecha con el Plan activo de cada día.</p>
         </div>
         <strong>{boughtCount}/{rows.length}</strong>
       </header>

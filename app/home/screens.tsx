@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import { Icon, type IconName } from '../components/Icons';
 import { InstallGuide } from '../components/InstallGuide';
 import { PERSONAL_MODE } from '../lib/feature-flags';
@@ -34,6 +34,7 @@ import {
   type ImplementationIntention,
   type LabCheckpoint,
   type Meal,
+  type MealPrepPlan,
   type Plan,
   type PlanSlot,
   type PlanSupplement,
@@ -51,6 +52,8 @@ import {
 } from './shared';
 import { ActivePlanView } from './food-guide';
 import { WeeklyShoppingList } from './food-guide/shopping-list';
+import { MealPrepView } from './food-guide/meal-prep';
+import { getCurrentMealPrepPlan, getShoppingScopeKey, resolveMealPrepWeek } from '../lib/meal-prep';
 import { PlanSlotChecklist } from './plan-slot-checklist';
 import { PlanSupplementChecklist } from './plan-supplement-checklist';
 
@@ -94,6 +97,8 @@ export function TodayView({
     todayData.movementBreaks.length >= state.settings.dailyMovementGoal;
   const supplementComplete = todayData.supplementTaken;
   const activePlan = getActivePlanForDate(state.plans, today);
+  const todayMealPrepPlan = getCurrentMealPrepPlan(state.mealPrepPlans, getWeekStart(today));
+  const duePrepSession = todayMealPrepPlan?.sessions.find(session => session.scheduledFor.slice(0, 10) === today);
   const hasSupplementQuest = Boolean(activePlan?.supplements.length);
   const exerciseComplete = todayData.exercises.length > 0;
   const mealsComplete = todayData.mainMeals.length >= 3;
@@ -175,6 +180,23 @@ export function TodayView({
             Crear mi plan con IA <Icon name="arrow" size={15} />
           </button>
           <small>No genera una dieta: organiza el plan que ya recibiste.</small>
+        </section>
+      )}
+
+      {duePrepSession && todayMealPrepPlan && (
+        <section className="today-prep-card">
+          <span><Icon name="utensils" size={20} /></span>
+          <div>
+            <p className="eyebrow">PREPARACIÓN DE HOY</p>
+            <strong>{duePrepSession.estimatedMinutes} min · {duePrepSession.taskIds.length} tareas</strong>
+            <small>Tu avance se guarda después de cada paso.</small>
+          </div>
+          <button className="text-button" onClick={() => {
+            const url = new URL(window.location.href);
+            url.searchParams.set('food', 'preparar');
+            window.history.replaceState(window.history.state, '', `${url.pathname}${url.search}`);
+            onNavigate('food');
+          }}>Abrir <Icon name="arrow" size={14} /></button>
         </section>
       )}
 
@@ -611,7 +633,10 @@ export function FoodView({
   onTogglePlanSupplement,
   onToggleShoppingItem,
   onClearShoppingList,
-  onWater
+  onSaveMealPrepPlan,
+  onTogglePrepTask,
+  onWater,
+  onKitchenModeChange
 }: {
   state: AppState;
   today: string;
@@ -626,11 +651,21 @@ export function FoodView({
     slot: PlanSlot
   ) => void;
   onTogglePlanSupplement: (planId: string, supplement: PlanSupplement) => void;
-  onToggleShoppingItem: (key: string) => void;
-  onClearShoppingList: () => void;
+  onToggleShoppingItem: (scopeKey: string, key: string) => void;
+  onClearShoppingList: (scopeKey: string) => void;
+  onSaveMealPrepPlan: (plan: MealPrepPlan) => void;
+  onTogglePrepTask: (mealPrepPlanId: string, prepTaskId: string) => void;
   onWater: () => void;
+  onKitchenModeChange: (active: boolean) => void;
 }) {
-  const [tab, setTab] = useState<'registro' | 'guia' | 'compras'>('registro');
+  const [kitchenModeActive, setKitchenModeActive] = useState(false);
+  const [tab, setTab] = useState<'registro' | 'guia' | 'preparar' | 'compras'>(() =>
+    typeof window !== 'undefined' && new URLSearchParams(window.location.search).get('food') === 'preparar' ? 'preparar' : 'registro'
+  );
+  const weekStart = getWeekStart(today);
+  const prepWeek = resolveMealPrepWeek(state.plans, weekStart);
+  const shoppingScopeKey = getShoppingScopeKey(weekStart, prepWeek.sourceFingerprint);
+  const mealPrepPlan = getCurrentMealPrepPlan(state.mealPrepPlans, weekStart);
   const activePlan = getActivePlanForDate(state.plans, today);
   const activeDayType = activePlan
     ? getDayTypeForDate(activePlan, today)
@@ -663,30 +698,46 @@ export function FoodView({
     1,
     Math.ceil(state.settings.dailyWaterGoalMl / state.settings.bottleSizeMl)
   );
+  const selectFoodTab = (next: typeof tab) => {
+    const url = new URL(window.location.href);
+    if (next === 'preparar') url.searchParams.set('food', 'preparar');
+    else url.searchParams.delete('food');
+    window.history.replaceState(window.history.state, '', `${url.pathname}${url.search}${url.hash}`);
+    setTab(next);
+  };
+  const handleKitchenModeChange = useCallback((active: boolean) => {
+    setKitchenModeActive(active);
+    onKitchenModeChange(active);
+  }, [onKitchenModeChange]);
   return (
-    <div className="page-stack">
-      <PageHeader
+    <div className={classNames('page-stack', kitchenModeActive && 'kitchen-flow-active')}>
+      {!kitchenModeActive && <PageHeader
         eyebrow="COMIDA"
         title="Comer con intención"
         subtitle="Registra lo suficiente para notar tus patrones."
-      />
-      <div className="segmented-control food-section-tabs">
+      />}
+      {!kitchenModeActive && <div className="segmented-control food-section-tabs">
         <button
           className={classNames(tab === 'registro' && 'selected')}
-          onClick={() => setTab('registro')}>
-          Registro
+          onClick={() => selectFoodTab('registro')}>
+          Hoy
         </button>
         <button
           className={classNames(tab === 'guia' && 'selected')}
-          onClick={() => setTab('guia')}>
-          Guía de comida
+          onClick={() => selectFoodTab('guia')}>
+          Plan
+        </button>
+        <button
+          className={classNames(tab === 'preparar' && 'selected')}
+          onClick={() => selectFoodTab('preparar')}>
+          Preparar
         </button>
         <button
           className={classNames(tab === 'compras' && 'selected')}
-          onClick={() => setTab('compras')}>
+          onClick={() => selectFoodTab('compras')}>
           Compras
         </button>
-      </div>
+      </div>}
       {tab === 'registro' ? (
         <>
           <section className="food-today-head">
@@ -720,6 +771,13 @@ export function FoodView({
                 onTogglePlanSlot(activePlan.id, activeDayType.id, slot)
               }
               onOpenMeal={onOpenMeal}
+              operationalBySlot={Object.fromEntries([
+                ...(mealPrepPlan?.portions ?? []).filter(portion => portion.date === today).map(portion => {
+                  const storage = portion.storage === 'freezer' ? 'Congelador' : portion.storage === 'refrigerator' ? 'Refrigerador' : 'Al momento';
+                  return [portion.slotId, { label: storage, detail: portion.finishInstruction ?? `Listo en ${storage.toLocaleLowerCase('es-MX')}` }];
+                }),
+                ...(mealPrepPlan?.finishSteps ?? []).filter(step => step.date === today).map(step => [step.slotId, { label: 'Al momento', detail: step.instruction }]),
+              ])}
             />
           )}
           {activePlan && activePlan.supplements.length > 0 && (
@@ -781,13 +839,25 @@ export function FoodView({
           activePlan={activePlan}
           today={today}
         />
+      ) : tab === 'preparar' ? (
+        <MealPrepView
+          plans={state.plans}
+          weekStart={weekStart}
+          savedPlan={mealPrepPlan}
+          savedPlans={state.mealPrepPlans}
+          completions={state.prepTaskCompletions}
+          onPlanEntry={onPlanEntry}
+          onSave={onSaveMealPrepPlan}
+          onToggleTask={onTogglePrepTask}
+          onKitchenModeChange={handleKitchenModeChange}
+        />
       ) : (
         <WeeklyShoppingList
-          plan={activePlan}
-          weekStart={getWeekStart(today)}
-          bought={state.shoppingListState.bought}
-          onToggle={onToggleShoppingItem}
-          onClear={onClearShoppingList}
+          plans={state.plans}
+          weekStart={weekStart}
+          bought={state.shoppingListState.boughtByWeek[shoppingScopeKey] ?? {}}
+          onToggle={key => onToggleShoppingItem(shoppingScopeKey, key)}
+          onClear={() => onClearShoppingList(shoppingScopeKey)}
           onPlanEntry={onPlanEntry}
         />
       )}

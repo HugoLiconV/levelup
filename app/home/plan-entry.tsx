@@ -234,11 +234,13 @@ function updateIngredient(
 export function PlanEntryScreen({
   onClose,
   onSave,
-  onViewToday
+  onViewToday,
+  onPrepareWeek
 }: {
   onClose: () => void;
   onSave: (plan: PlanToSave) => void;
   onViewToday: () => void;
+  onPrepareWeek: () => void;
 }) {
   const [stage, setStage] = useState<'paste' | 'review' | 'success'>('paste');
   const [reviewStep, setReviewStep] = useState<ReviewStep>('schedule');
@@ -492,7 +494,7 @@ export function PlanEntryScreen({
         </div>
 
         {stage === 'success' && draft ? (
-          <PlanSaveSuccess draft={draft} onViewToday={onViewToday} />
+          <PlanSaveSuccess draft={draft} onViewToday={onViewToday} onPrepareWeek={onPrepareWeek} />
         ) : stage === 'paste' && busy ? (
           <InterpretationLoading />
         ) : stage === 'paste' ? (
@@ -683,10 +685,12 @@ export function PlanEntryScreen({
 
 function PlanSaveSuccess({
   draft,
-  onViewToday
+  onViewToday,
+  onPrepareWeek
 }: {
   draft: PlanDraft;
   onViewToday: () => void;
+  onPrepareWeek: () => void;
 }) {
   const metrics = [
     { value: draft.dayTypes.length, label: 'variantes' },
@@ -733,6 +737,12 @@ function PlanSaveSuccess({
         className="primary-button plan-success-action"
         onClick={onViewToday}>
         Ver mi plan de hoy <Icon name="arrow" size={16} />
+      </button>
+      <button
+        type="button"
+        className="secondary-button plan-success-action"
+        onClick={onPrepareWeek}>
+        Preparar mi semana <Icon name="utensils" size={16} />
       </button>
       <small className="plan-success-note">
         LevelUp organizó tu menú; no modificó las indicaciones de tu profesional.

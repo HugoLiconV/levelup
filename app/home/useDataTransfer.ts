@@ -53,6 +53,7 @@ export function useDataTransfer({
         const imported = {
           ...seed,
           ...parsed,
+          version: 2,
           settings: {
             ...seed.settings,
             ...parsed.settings,
@@ -60,7 +61,14 @@ export function useDataTransfer({
               ...seed.settings.questXp,
               ...(parsed.settings.questXp ?? {})
             }
-          }
+          },
+          shoppingListState: {
+            boughtByWeek: parsed.shoppingListState && 'boughtByWeek' in parsed.shoppingListState
+              ? parsed.shoppingListState.boughtByWeek ?? {}
+              : { legacy: (parsed.shoppingListState as unknown as { bought?: Record<string, boolean> } | undefined)?.bought ?? {} }
+          },
+          mealPrepPlans: Array.isArray(parsed.mealPrepPlans) ? parsed.mealPrepPlans : [],
+          prepTaskCompletions: Array.isArray(parsed.prepTaskCompletions) ? parsed.prepTaskCompletions : []
         } as AppState;
         setState(syncAchievements(imported, today));
         setNotice('Datos importados correctamente');

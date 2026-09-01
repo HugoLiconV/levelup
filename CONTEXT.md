@@ -31,3 +31,29 @@ A weekly, auto-derived aggregation of a Plan's Ingredients (summed by gram/ml eq
 **Meal**:
 The app's existing freeform logged entry (`date`, `type`, `description`, `tags`) that daily scoring/XP/achievements read from. Checking off a prescribed Slot auto-creates a Meal (tags derived from its Dishes); deviating from the Plan still logs a Meal the freeform way.
 _Avoid_: Log entry, food entry.
+
+**Meal Prep Plan**:
+A versioned, editable weekly execution plan derived from the Plan or Plans active across that week. It preserves what was prescribed and describes only how advance work, storage, and day-of finishing will happen.
+_Avoid_: Plan (alone), diet, replacement Plan.
+
+**Prep Session**:
+A scheduled block of advance kitchen work, such as a main Sunday session or a shorter midweek session.
+
+**Batch**:
+A quantity of one Dish prepared once and allocated to one or more future Slot occurrences.
+
+**Component Batch**:
+One or more Ingredients washed, cut, portioned, or otherwise staged ahead for one or more future Dishes while final cooking or assembly remains a Finish Step.
+_Avoid_: Partial Dish, mise en place.
+
+**Portion**:
+The allocation of a Batch to one date and Slot. A Portion identifies where it is stored and when it should be consumed or moved for thawing.
+
+**Prep Task**:
+One checkable action within a Prep Session, such as washing, cutting, cooking, cooling, portioning, labeling, storing, or cleaning.
+
+**Finish Step**:
+A short action intentionally left for the day of a Slot, such as blending, assembling, reheating, dressing, or cooking fresh.
+
+**Safety Rule**:
+An authoritative constraint that can reject or change a proposed preparation, storage, or consumption schedule. It takes precedence over generated suggestions.

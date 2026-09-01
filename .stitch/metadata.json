@@ -1,0 +1,22 @@
+{
+  "projectId": "8429778439021631210",
+  "projectUrl": "https://stitch.withgoogle.com/projects/8429778439021631210",
+  "title": "Level Up",
+  "screens": [
+    { "title": "/", "file": ".stitch/home.html", "screenId": "7892776493520181201", "source": "authenticated-puppeteer" },
+    { "title": "/?screen=food", "file": ".stitch/food.html", "screenId": "6340407156819235330", "source": "authenticated-puppeteer" },
+    { "title": "/?screen=move", "file": ".stitch/move.html", "screenId": "55984007763343777", "source": "authenticated-puppeteer" },
+    { "title": "/?screen=progress", "file": ".stitch/progress.html", "screenId": "12188766267827656262", "source": "authenticated-puppeteer" },
+    { "title": "/?screen=more", "file": ".stitch/more.html", "screenId": "437202232620285078", "source": "authenticated-puppeteer" },
+    { "title": "/login", "file": ".stitch/login.html", "screenId": "13601842816659641893", "source": "static-fallback" }
+  ],
+  "designSystem": {
+    "name": "Level Up",
+    "source": ".stitch/DESIGN.md",
+    "primary": "#34796f",
+    "background": "#f7f5f0",
+    "font": "Geist",
+    "roundness": "13px default, 23px cards",
+    "assetId": "33b01ca923334daa824b67524b09d5c3"
+  }
+}

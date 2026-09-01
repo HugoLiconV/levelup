@@ -1,5 +1,6 @@
 'use client';
 
+import { useState } from 'react';
 import { Icon } from '../components/Icons';
 import {
   ExerciseModal,
@@ -9,6 +10,7 @@ import {
 } from './modals';
 import { PlanEntryScreen } from './plan-entry';
 import { MainTabBar, useMainTabNavigation } from './navigation';
+import { classNames } from './shared';
 import {
   FoodView,
   MoveView,
@@ -19,6 +21,7 @@ import {
 import { useLevelUpApp } from './useLevelUpApp';
 
 export default function LevelUpApp() {
+  const [kitchenModeActive, setKitchenModeActive] = useState(false);
   const {
     ready,
     state,
@@ -51,6 +54,8 @@ export default function LevelUpApp() {
     togglePlanSupplement,
     toggleShoppingItem,
     clearShoppingList,
+    saveMealPrepPlan,
+    togglePrepTask,
     openPlanEntry,
     updateSettings,
     toggleReminders,
@@ -102,10 +107,15 @@ export default function LevelUpApp() {
             navigate('food');
             setModal(null);
           }}
+          onPrepareWeek={() => {
+            window.history.replaceState(null, '', `${window.location.pathname}?food=preparar`);
+            navigate('food');
+            setModal(null);
+          }}
         />
       ) : (
         <>
-        <main ref={mainRef} className="app-main">
+        <main ref={mainRef} className={classNames('app-main', kitchenModeActive && 'kitchen-app-main')}>
         {screen === 'today' && (
           <TodayView
             state={state}
@@ -139,7 +149,10 @@ export default function LevelUpApp() {
             onTogglePlanSupplement={togglePlanSupplement}
             onToggleShoppingItem={toggleShoppingItem}
             onClearShoppingList={clearShoppingList}
+            onSaveMealPrepPlan={saveMealPrepPlan}
+            onTogglePrepTask={togglePrepTask}
             onWater={logWater}
+            onKitchenModeChange={setKitchenModeActive}
           />
         )}
         {screen === 'move' && (
@@ -216,7 +229,7 @@ export default function LevelUpApp() {
           onSave={saveIntention}
         />
       )}
-        <MainTabBar screen={screen} onNavigate={navigate} />
+        {!kitchenModeActive && <MainTabBar screen={screen} onNavigate={navigate} />}
         </>
       )}
       <input

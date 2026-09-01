@@ -28,6 +28,7 @@ import {
   type ImplementationIntention,
   type LabCheckpoint,
   type Meal,
+  type MealPrepPlan,
   type Plan,
   type PlanSlot,
   type PlanSupplement,
@@ -316,20 +317,48 @@ export function useLevelUpApp() {
     }, existing ? `${supplement.name} desmarcado` : `✓ ${supplement.name} registrado · +${state.settings.questXp.omega} XP`);
   };
 
-  const toggleShoppingItem = (key: string) => {
+  const toggleShoppingItem = (scopeKey: string, key: string) => {
     apply(previous => {
-      const bought = { ...previous.shoppingListState.bought };
+      const bought = { ...(previous.shoppingListState.boughtByWeek[scopeKey] ?? {}) };
       if (bought[key]) delete bought[key];
       else bought[key] = true;
-      return { ...previous, shoppingListState: { bought } };
+      return { ...previous, shoppingListState: { boughtByWeek: { ...previous.shoppingListState.boughtByWeek, [scopeKey]: bought } } };
     });
   };
 
-  const clearShoppingList = () => {
+  const clearShoppingList = (scopeKey: string) => {
     apply(
-      previous => ({ ...previous, shoppingListState: { bought: {} } }),
+      previous => ({ ...previous, shoppingListState: { boughtByWeek: { ...previous.shoppingListState.boughtByWeek, [scopeKey]: {} } } }),
       'Lista de compras reiniciada'
     );
+  };
+
+  const saveMealPrepPlan = (mealPrepPlan: MealPrepPlan) => {
+    apply(previous => ({
+      ...previous,
+      mealPrepPlans: [
+        ...previous.mealPrepPlans.map(plan => plan.weekStart === mealPrepPlan.weekStart && plan.status !== 'superseded' ? { ...plan, status: 'superseded' as const } : plan),
+        mealPrepPlan,
+      ],
+    }), 'Preparación semanal guardada');
+  };
+
+  const togglePrepTask = (mealPrepPlanId: string, prepTaskId: string) => {
+    apply(previous => {
+      const exists = previous.prepTaskCompletions.some(item => item.mealPrepPlanId === mealPrepPlanId && item.prepTaskId === prepTaskId);
+      const prepTaskCompletions = exists
+        ? previous.prepTaskCompletions.filter(item => !(item.mealPrepPlanId === mealPrepPlanId && item.prepTaskId === prepTaskId))
+        : [...previous.prepTaskCompletions, { mealPrepPlanId, prepTaskId, completedAt: new Date().toISOString() }];
+      const completedIds = new Set(prepTaskCompletions.filter(item => item.mealPrepPlanId === mealPrepPlanId).map(item => item.prepTaskId));
+      return {
+        ...previous,
+        prepTaskCompletions,
+        mealPrepPlans: previous.mealPrepPlans.map(plan => plan.id !== mealPrepPlanId ? plan : {
+          ...plan,
+          status: plan.tasks.length > 0 && plan.tasks.every(task => completedIds.has(task.id)) ? 'complete' : completedIds.size > 0 ? 'in_progress' : 'ready',
+        }),
+      };
+    });
   };
 
   const addExercise = (exercise: {
@@ -485,6 +514,8 @@ export function useLevelUpApp() {
     togglePlanSupplement,
     toggleShoppingItem,
     clearShoppingList,
+    saveMealPrepPlan,
+    togglePrepTask,
     addMeal,
     addExercise,
     saveLabs,
