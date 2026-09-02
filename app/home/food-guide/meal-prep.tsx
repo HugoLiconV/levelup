@@ -2,6 +2,7 @@
 
 import { useEffect, useMemo, useState } from 'react';
 import { Icon } from '../../components/Icons';
+import { Button, IconButton } from '../../components/ui';
 import {
   addDays,
   daysBetween,
@@ -163,7 +164,7 @@ export function MealPrepView({
         <p className="eyebrow">PREPARACIÓN SEMANAL</p>
         <h2>Primero necesitas un Plan activo</h2>
         <p>La preparación organiza el Plan que ya recibiste; no genera ni cambia tu dieta.</p>
-        <button className="primary-button" onClick={onPlanEntry}><Icon name="plus" size={16} /> Agregar Plan</button>
+        <Button variant="primary" onClick={onPlanEntry}><Icon name="plus" size={16} /> Agregar Plan</Button>
       </section>
     );
   }
@@ -272,9 +273,9 @@ export function MealPrepView({
             </div>
             <div className="prep-selection-next">
               <span className="prep-selection-time"><Icon name="clock" size={13} /> ≈ 1 min</span>
-              <button className="primary-button" disabled={selectedIds.length === 0 || generating} onClick={generate}>
+              <Button variant="primary" disabled={selectedIds.length === 0 || generating} onClick={generate}>
                 {generating ? 'Generando…' : 'Continuar'} <Icon name="arrow" size={15} />
-              </button>
+              </Button>
             </div>
           </div>
         </>
@@ -305,7 +306,7 @@ export function MealPrepView({
             <div className="prep-chip-list">{EQUIPMENT.map(item => <button key={item} type="button" className={classNames(preferences.equipment.includes(item) && 'selected')} onClick={() => setPreferences(current => ({ ...current, equipment: current.equipment.includes(item) ? current.equipment.filter(value => value !== item) : [...current.equipment, item] }))}>{EQUIPMENT_LABELS[item]}</button>)}</div>
           </section>
           {error && <p className="prep-error" role="alert"><Icon name="info" size={15} /> {error}</p>}
-          <div className="prep-actions"><button className="secondary-button" onClick={() => setStep(draft ? 'review' : 'coverage')}>Atrás</button><button className="primary-button" disabled={generating} onClick={generate}>{generating ? 'Actualizando…' : 'Actualizar recomendación'} <Icon name="sparkles" size={15} /></button></div>
+          <div className="prep-actions"><Button variant="secondary" onClick={() => setStep(draft ? 'review' : 'coverage')}>Atrás</Button><Button variant="primary" disabled={generating} onClick={generate}>{generating ? 'Actualizando…' : 'Actualizar recomendación'} <Icon name="sparkles" size={15} /></Button></div>
         </>
       )}
 
@@ -342,7 +343,7 @@ function ReviewDraft({ draft, mode, recommendationSource, error, onDraftChange, 
           <p>Generamos esta semana con {recommendationSource}. Revisa el resultado y personaliza solo si necesitas cambiar horarios, equipo o nivel de adelanto.</p>
         </div>
       </div>
-      <button className="secondary-button" onClick={onCustomize}>Personalizar preparación</button>
+      <Button variant="secondary" onClick={onCustomize}>Personalizar preparación</Button>
     </section>
     <section className="prep-review-section"><header><div><p className="eyebrow">SESIONES</p><h3>Orden de preparación</h3></div></header>{draft.sessions.map(session => <article key={session.id} className="prep-session-card"><div><strong>{new Intl.DateTimeFormat('es-MX', { weekday: 'long', hour: 'numeric', minute: '2-digit' }).format(new Date(session.scheduledFor))}</strong><span>{session.estimatedMinutes} min estimados</span></div><small>{session.taskIds.length} tareas secuenciales</small></article>)}</section>
     <section className="prep-review-section"><p className="eyebrow">QUÉ VAS A ADELANTAR</p><h3>Platillos y componentes</h3>{draft.batches.map(batch => <article key={batch.id} className="prep-batch-card"><div className="prep-batch-title"><strong>{batch.label}</strong><span className={classNames('prep-batch-kind', batch.kind === 'component' && 'component')}>{batch.kind === 'component' ? 'Componentes' : 'Platillo listo'}</span></div><span>{batch.quantityDisplay}</span><small>{batch.portionIds.length} porciones asignadas</small></article>)}</section>
@@ -350,7 +351,7 @@ function ReviewDraft({ draft, mode, recommendationSource, error, onDraftChange, 
     <details className="prep-task-editor"><summary>Revisar instrucciones <span>{draft.tasks.length} tareas</span></summary><div>{draft.tasks.map(task => <label key={task.id}><span>{taskKindLabel(task.kind)} · {task.estimatedMinutes} min {task.provenance === 'safety_rule' ? '· regla fija' : '· sugerencia editable'}</span><textarea value={task.instruction} disabled={task.provenance === 'safety_rule'} onChange={event => onDraftChange({ ...draft, tasks: draft.tasks.map(item => item.id === task.id ? { ...item, instruction: event.target.value } : item) })} /></label>)}</div></details>
     <section className="prep-storage-summary"><div><Icon name="meal" size={18} /><span><strong>{refrigerator}</strong> refrigerador</span></div><div><Icon name="lock" size={18} /><span><strong>{freezer}</strong> congelador</span></div><div><Icon name="sun" size={18} /><span><strong>{draft.finishSteps.length}</strong> frescas</span></div></section>
     {draft.assumptions.length > 0 && <section className="prep-assumptions" aria-labelledby="prep-assumptions-title"><p className="eyebrow" id="prep-assumptions-title">NECESITA TU REVISIÓN</p>{draft.assumptions.map(item => <div key={item.id} id={`prep-assumption-${item.id}`} className="prep-assumption-item"><Icon name="info" size={14} /><p>{item.text}</p></div>)}{criticalAssumptions.length > 0 && <label className="prep-assumption-ack"><input type="checkbox" checked={assumptionsAcknowledged} onChange={event => setAssumptionsAcknowledged(event.target.checked)} /><span>Confirmo que revisé los supuestos de almacenamiento y seguridad.</span></label>}</section>}
-    <div className="prep-actions"><button className="secondary-button" onClick={onBack}>Personalizar preparación</button><button className="primary-button" disabled={criticalAssumptions.length > 0 && !assumptionsAcknowledged} onClick={onSave}>Guardar preparación <Icon name="check" size={15} /></button></div>
+    <div className="prep-actions"><Button variant="secondary" onClick={onBack}>Personalizar preparación</Button><Button variant="primary" disabled={criticalAssumptions.length > 0 && !assumptionsAcknowledged} onClick={onSave}>Guardar preparación <Icon name="check" size={15} /></Button></div>
   </>;
 }
 
@@ -378,7 +379,7 @@ function PreparedWeek({ plan, completions, updateAvailable, onStart, onAdjust }:
   };
 
   return <div className="prepared-week">
-    {updateAvailable && <section className="prep-update-card"><div><strong>Nueva preparación por componentes</strong><p>Vuelve a generar para incluir paquetes para licuar y verduras cortadas para tus comidas frescas.</p></div><button className="secondary-button" onClick={onAdjust}>Actualizar</button></section>}
+    {updateAvailable && <section className="prep-update-card"><div><strong>Nueva preparación por componentes</strong><p>Vuelve a generar para incluir paquetes para licuar y verduras cortadas para tus comidas frescas.</p></div><Button variant="secondary" onClick={onAdjust}>Actualizar</Button></section>}
     <section className={classNames('prep-ready-hero', weekComplete && 'is-complete')}><span className="prep-ready-icon"><Icon name="checkCircle" size={23} /></span><p className="eyebrow">{weekComplete ? 'SEMANA COMPLETADA' : 'SEMANA ORGANIZADA'}</p><h2>{weekComplete ? 'Preparación semanal completada' : 'Tu plan de preparación está listo'}</h2><p>{plan.batches.length} preparaciones · {plan.portions.length} porciones · {plan.finishSteps.length} pasos al momento</p><div className="prep-progress"><i style={{ width: `${plan.tasks.length ? Math.round(completedCount / plan.tasks.length * 100) : 0}%` }} /></div><small>{completedCount} de {plan.tasks.length} tareas completadas</small></section>
     <section className="prep-next-action" aria-labelledby="prep-next-action-title">
       <div>
@@ -386,7 +387,7 @@ function PreparedWeek({ plan, completions, updateAvailable, onStart, onAdjust }:
         <h3 id="prep-next-action-title">{nextSession ? 'Continúa con tu preparación' : 'Preparación semanal al día'}</h3>
         <p>{nextSession ? `${new Intl.DateTimeFormat('es-MX', { weekday: 'long', day: 'numeric', month: 'short', hour: 'numeric', minute: '2-digit' }).format(new Date(nextSession.scheduledFor))} · ${nextSession.estimatedMinutes} min · ${nextSession.taskIds.length} tareas` : 'Ya completaste todas las sesiones de esta semana.'}</p>
       </div>
-      {nextSession && <button className="primary-button" onClick={() => onStart(nextSession.id)}>{sessionActionLabel(nextSession)} <Icon name="arrow" size={14} /></button>}
+      {nextSession && <Button variant="primary" onClick={() => onStart(nextSession.id)}>{sessionActionLabel(nextSession)} <Icon name="arrow" size={14} /></Button>}
     </section>
     <section className="prep-day-list" aria-label="Resumen por día">
       {dayDates.map(date => {
@@ -405,14 +406,14 @@ function PreparedWeek({ plan, completions, updateAvailable, onStart, onAdjust }:
             <Icon name="chevron" size={17} className="prep-day-chevron" />
           </summary>
           <div className="prep-day-content">
-            {sessions.length > 0 && <div className="prep-day-content-section"><p className="eyebrow">SESIONES</p>{sessions.map(session => { const done = session.taskIds.filter(id => completedIds.has(id)).length; return <article key={session.id} className="prep-session-card"><div><strong>{new Intl.DateTimeFormat('es-MX', { weekday: 'long', day: 'numeric', month: 'short', hour: 'numeric', minute: '2-digit' }).format(new Date(session.scheduledFor))}</strong><span>{session.estimatedMinutes} min · {done}/{session.taskIds.length} tareas</span></div><button className="primary-button" onClick={() => onStart(session.id)}>{sessionActionLabel(session)} <Icon name="arrow" size={14} /></button></article>; })}</div>}
+            {sessions.length > 0 && <div className="prep-day-content-section"><p className="eyebrow">SESIONES</p>{sessions.map(session => { const done = session.taskIds.filter(id => completedIds.has(id)).length; return <article key={session.id} className="prep-session-card"><div><strong>{new Intl.DateTimeFormat('es-MX', { weekday: 'long', day: 'numeric', month: 'short', hour: 'numeric', minute: '2-digit' }).format(new Date(session.scheduledFor))}</strong><span>{session.estimatedMinutes} min · {done}/{session.taskIds.length} tareas</span></div><Button variant="primary" onClick={() => onStart(session.id)}>{sessionActionLabel(session)} <Icon name="arrow" size={14} /></Button></article>; })}</div>}
             {finishSteps.length > 0 && <div className="prep-day-content-section"><p className="eyebrow">{date === today ? 'INSTRUCCIONES DE HOY' : 'AL MOMENTO'}</p><div className="prep-finish-list">{finishSteps.map(step => <article key={step.id}><span>{formatWeekday(step.date)}</span><p>{step.instruction}</p></article>)}</div></div>}
             {storedPortions.length > 0 && <div className="prep-day-content-section"><p className="eyebrow">PORCIONES GUARDADAS</p>{storedPortions.map(portion => { const batch = plan.batches.find(item => item.id === portion.batchId); return <article key={portion.id} className="prep-portion-row"><span className={classNames('prep-storage-dot', portion.storage)} /><span><strong>{batch?.label ?? 'Porción preparada'}</strong><small>{portion.storage === 'freezer' ? `${batch?.kind === 'component' ? 'Congelador · usar desde congelado' : `Congelador · pasa al refri ${portion.thawAt ? formatShortDate(portion.thawAt) : ''}`}` : `Refrigerador · consumir antes del ${portion.consumeBy ? formatShortDate(portion.consumeBy) : ''}`}</small></span></article>; })}</div>}
           </div>
         </details>;
       })}
     </section>
-    <div className="prep-week-actions"><button className="text-button" onClick={onAdjust}>Ajustar preparación</button></div>
+    <div className="prep-week-actions"><Button variant="text" onClick={onAdjust}>Ajustar preparación</Button></div>
   </div>;
 }
 
@@ -454,12 +455,12 @@ function KitchenMode({ plan, sessionId, completions, onToggle, onClose }: { plan
   if (sessionComplete) {
     return <SessionComplete session={session} storageSummary={storageSummary} nextSession={nextSession} onClose={onClose} />;
   }
-  if (!task) return <section className="prep-empty"><h2>Esta sesión no tiene tareas</h2><button className="secondary-button" onClick={onClose}>Volver</button></section>;
+  if (!task) return <section className="prep-empty"><h2>Esta sesión no tiene tareas</h2><Button variant="secondary" onClick={onClose}>Volver</Button></section>;
   const done = completed.has(task.id);
   const kindLabel = { wash: 'lavar', cut: 'cortar', cook: 'cocinar', cool: 'enfriar', portion: 'porcionar', label: 'etiquetar', store: 'guardar', clean: 'limpiar' }[task.kind];
   const secondsLeft = timerEndsAt ? Math.max(0, Math.ceil((timerEndsAt - now) / 1000)) : 0;
   const timerLabel = timerEndsAt ? `${Math.floor(secondsLeft / 60)}:${String(secondsLeft % 60).padStart(2, '0')}` : `Iniciar timer · ${task.estimatedMinutes} min`;
-  return <section className="kitchen-mode"><header><button className="icon-button" aria-label="Salir de modo cocina" onClick={onClose}><Icon name="close" size={18} /></button><div><p className="eyebrow">MODO COCINA</p><strong>{index + 1} de {tasks.length}</strong></div><span>{task.estimatedMinutes} min</span></header><p className="kitchen-save-note"><Icon name="checkCircle" size={14} /> Tu avance se guarda automáticamente</p><div className="kitchen-progress"><i style={{ width: `${Math.round((index + Number(done)) / tasks.length * 100)}%` }} /></div><div className="kitchen-task"><span className="kitchen-kind">{kindLabel}</span><h2>{task.instruction}</h2>{task.equipment.length > 0 && <p><Icon name="info" size={15} /> Equipo: {task.equipment.map(item => EQUIPMENT_LABELS[item] ?? item).join(', ')}</p>}<small>{task.provenance === 'safety_rule' ? 'Regla de seguridad' : task.provenance === 'plan' ? 'Dato de tu Plan' : 'Sugerencia para revisar'}</small></div><div className="kitchen-actions"><button className="secondary-button kitchen-timer" onClick={() => { setNow(Date.now()); setTimerEndsAt(Date.now() + task.estimatedMinutes * 60000); }}><Icon name="clock" size={16} /> {timerLabel}</button><button className="primary-button" onClick={() => { if (!done) onToggle(plan.id, task.id); setTimerEndsAt(null); if (index < tasks.length - 1) setIndex(index + 1); }}>{done ? 'Siguiente' : 'Listo'} <Icon name="check" size={18} /></button><div><button className="secondary-button" disabled={index === 0} onClick={() => setIndex(index - 1)}>Atrás</button><button className="secondary-button" disabled={index === tasks.length - 1} onClick={() => setIndex(index + 1)}>Omitir por ahora</button></div></div></section>;
+  return <section className="kitchen-mode"><header><IconButton label="Salir de modo cocina" onClick={onClose}><Icon name="close" size={18} /></IconButton><div><p className="eyebrow">MODO COCINA</p><strong>{index + 1} de {tasks.length}</strong></div><span>{task.estimatedMinutes} min</span></header><p className="kitchen-save-note"><Icon name="checkCircle" size={14} /> Tu avance se guarda automáticamente</p><div className="kitchen-progress"><i style={{ width: `${Math.round((index + Number(done)) / tasks.length * 100)}%` }} /></div><div className="kitchen-task"><span className="kitchen-kind">{kindLabel}</span><h2>{task.instruction}</h2>{task.equipment.length > 0 && <p><Icon name="info" size={15} /> Equipo: {task.equipment.map(item => EQUIPMENT_LABELS[item] ?? item).join(', ')}</p>}<small>{task.provenance === 'safety_rule' ? 'Regla de seguridad' : task.provenance === 'plan' ? 'Dato de tu Plan' : 'Sugerencia para revisar'}</small></div><div className="kitchen-actions"><Button variant="secondary" className="kitchen-timer" onClick={() => { setNow(Date.now()); setTimerEndsAt(Date.now() + task.estimatedMinutes * 60000); }}><Icon name="clock" size={16} /> {timerLabel}</Button><Button variant="primary" onClick={() => { if (!done) onToggle(plan.id, task.id); setTimerEndsAt(null); if (index < tasks.length - 1) setIndex(index + 1); }}>{done ? 'Siguiente' : 'Listo'} <Icon name="check" size={18} /></Button><div><Button variant="secondary" disabled={index === 0} onClick={() => setIndex(index - 1)}>Atrás</Button><Button variant="secondary" disabled={index === tasks.length - 1} onClick={() => setIndex(index + 1)}>Omitir por ahora</Button></div></div></section>;
 }
 
 function SessionComplete({ session, storageSummary, nextSession, onClose }: { session: MealPrepPlan['sessions'][number]; storageSummary: Array<{ label: string; storage: 'refrigerator' | 'freezer'; count: number }>; nextSession?: MealPrepPlan['sessions'][number]; onClose: () => void }) {
@@ -482,6 +483,6 @@ function SessionComplete({ session, storageSummary, nextSession, onClose }: { se
       <h3 id="next-session-title">{nextDate ?? 'No hay otra sesión programada'}</h3>
       <p>{nextSession ? `${nextSession.taskIds.length} tareas · ${nextSession.estimatedMinutes} min estimados` : 'Tu preparación semanal está al día.'}</p>
     </section>
-    <button className="primary-button full-button" onClick={onClose}>Volver a preparación <Icon name="arrow" size={15} /></button>
+    <Button variant="primary" fullWidth onClick={onClose}>Volver a preparación <Icon name="arrow" size={15} /></Button>
   </section>;
 }

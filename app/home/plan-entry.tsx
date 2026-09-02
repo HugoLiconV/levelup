@@ -2,6 +2,7 @@
 
 import { useEffect, useRef, useState, type FormEvent } from 'react';
 import { Icon } from '../components/Icons';
+import { Button, Field, IconButton } from '../components/ui';
 import { DEMO_NUTRITION_MENU } from '../lib/demo-menu';
 import {
   createId,
@@ -511,9 +512,10 @@ export function PlanEntryScreen({
                   <strong>Prueba la experiencia completa</strong>
                   <p>Carga un menú de demostración con dos variantes, cantidades y suplementos.</p>
                 </div>
-                <button
+                <Button
+                  variant="secondary"
                   type="button"
-                  className="secondary-button demo-menu-button"
+                  className="demo-menu-button"
                   disabled={demoMenuLoaded}
                   onClick={() => {
                     setRawText(DEMO_NUTRITION_MENU);
@@ -521,10 +523,12 @@ export function PlanEntryScreen({
                   }}>
                   {demoMenuLoaded ? <Icon name="check" size={14} /> : <Icon name="plus" size={14} />}
                   {demoMenuLoaded ? 'Menú cargado' : 'Usar menú de demostración'}
-                </button>
+                </Button>
               </div>
-              <div className="field">
-                <label htmlFor="nutrition-plan-source">Menú completo <small>(obligatorio)</small></label>
+              <Field
+                label={<>Menú completo <small>(obligatorio)</small></>}
+                htmlFor="nutrition-plan-source"
+              >
                 <textarea
                   id="nutrition-plan-source"
                   value={rawText}
@@ -547,20 +551,21 @@ export function PlanEntryScreen({
                       ? `Faltan ${MIN_MENU_TEXT_LENGTH - menuTextLength} caracteres para continuar.`
                       : `${menuTextLength} caracteres`}
                 </small>
-              </div>
+              </Field>
               {error && <p id="plan-paste-error" className="form-error" role="alert" aria-live="assertive" aria-atomic="true">{error}</p>}
             </div>
             <FlowActionBar className="plan-entry-actions plan-paste-actions">
-              <button
+              <Button
+                variant="primary"
                 type="submit"
-                className="primary-button plan-paste-submit"
+                className="plan-paste-submit"
                 disabled={pasteSubmitDisabled}
                 aria-disabled={pasteSubmitDisabled}
                 aria-busy={busy}
                 aria-describedby="nutrition-plan-source-length"
                 aria-label={busy ? 'Analizando menú con IA' : 'Analizar menú con IA'}>
                 <Icon name="sparkles" size={15} /> {busy ? 'Analizando menú…' : 'Analizar menú con IA'}
-              </button>
+              </Button>
             </FlowActionBar>
           </form>
         ) : draft ? (
@@ -597,17 +602,17 @@ export function PlanEntryScreen({
               <div className="plan-review-note">
                 <Icon name="info" size={17} />
                 <p>Este borrador no se guarda hasta que tú lo confirmes.</p>
-                <button type="button" className="text-button" onClick={() => setSourceOpen(current => !current)}>
+                <Button variant="text" type="button" onClick={() => setSourceOpen(current => !current)}>
                   {sourceOpen ? 'Ocultar texto' : 'Ver texto original'}
-                </button>
+                </Button>
               </div>
               {sourceOpen && (
                 <div className="plan-source-panel" role="region" aria-label="Texto original del menú">
                   <div className="plan-source-panel-heading">
                     <strong>Texto original</strong>
-                    <button type="button" className="icon-button" aria-label="Ocultar texto original" onClick={() => setSourceOpen(false)}>
+                    <IconButton label="Ocultar texto original" onClick={() => setSourceOpen(false)}>
                       <Icon name="close" size={15} />
-                    </button>
+                    </IconButton>
                   </div>
                   <pre>{rawText}</pre>
                 </div>
@@ -662,13 +667,13 @@ export function PlanEntryScreen({
               {error && <p className="form-error" role="alert">{error}</p>}
             </div>
             <FlowActionBar className="plan-entry-actions">
-              <button type="button" className="secondary-button" onClick={goBackOneStep}>
+              <Button variant="secondary" type="button" onClick={goBackOneStep}>
                 {reviewStep === 'schedule' ? 'Cambiar texto' : 'Atrás'}
-              </button>
-              <button type="submit" className="primary-button">
+              </Button>
+              <Button variant="primary" type="submit">
                 {reviewStep === 'supplements' ? 'Guardar nueva versión' : 'Continuar'}
                 {reviewStep !== 'supplements' && <Icon name="arrow" size={15} />}
-              </button>
+              </Button>
             </FlowActionBar>
           </form>
         ) : null}
@@ -732,18 +737,20 @@ function PlanSaveSuccess({
         </div>
       </div>
 
-      <button
+      <Button
+        variant="primary"
         type="button"
-        className="primary-button plan-success-action"
+        className="plan-success-action"
         onClick={onViewToday}>
         Ver mi plan de hoy <Icon name="arrow" size={16} />
-      </button>
-      <button
+      </Button>
+      <Button
+        variant="secondary"
         type="button"
-        className="secondary-button plan-success-action"
+        className="plan-success-action"
         onClick={onPrepareWeek}>
         Preparar mi semana <Icon name="utensils" size={16} />
-      </button>
+      </Button>
       <small className="plan-success-note">
         LevelUp organizó tu menú; no modificó las indicaciones de tu profesional.
       </small>
@@ -817,21 +824,19 @@ function ScheduleStep({
         <p>Esto ayuda a mostrarte la variante correcta cada día.</p>
       </div>
       <div className="field-row plan-date-row">
-        <div className="field">
-          <label htmlFor="plan-start-date">Empieza</label>
+        <Field label="Empieza" htmlFor="plan-start-date">
           <input id="plan-start-date" type="date" value={startDate} onChange={event => onStartDateChange(event.target.value)} />
-        </div>
-        <div className="field">
-          <label htmlFor="plan-end-date">Termina <small>(opcional)</small></label>
+        </Field>
+        <Field label={<>Termina <small>(opcional)</small></>} htmlFor="plan-end-date">
           <input id="plan-end-date" type="date" value={endDate} min={startDate} onChange={event => onEndDateChange(event.target.value)} />
-        </div>
+        </Field>
       </div>
       <div className="plan-section-heading">
         <div>
           <p className="eyebrow">VARIANTES</p>
           <h4>¿Qué menú toca cada día?</h4>
         </div>
-        <button type="button" className="text-button" onClick={onAddDayType}><Icon name="plus" size={14} /> Agregar variante</button>
+        <Button variant="text" type="button" onClick={onAddDayType}><Icon name="plus" size={14} /> Agregar variante</Button>
       </div>
       <div className="plan-schedule-list">
         {draft.dayTypes.map((dayType, index) => (
@@ -841,7 +846,7 @@ function ScheduleStep({
                 <p className="eyebrow">VARIANTE {index + 1}</p>
                 <strong>{dayType.slots.length} comidas detectadas</strong>
               </div>
-              {draft.dayTypes.length > 1 && <button type="button" className="text-button danger-text" onClick={() => onRemoveDayType(index)}>Eliminar</button>}
+              {draft.dayTypes.length > 1 && <Button variant="text" type="button" className="danger-text" onClick={() => onRemoveDayType(index)}>Eliminar</Button>}
             </div>
             <div className="field">
               <label htmlFor={`day-type-name-${index}`}>Nombre de la variante</label>
@@ -872,10 +877,10 @@ function ScheduleStep({
                   <div className="reference-edit-row" key={`reference-${referenceIndex}`}>
                     <input aria-label={`Etiqueta de referencia ${referenceIndex + 1}`} placeholder="Momento" value={reference.label} onChange={event => onDayTypeChange(index, current => ({ ...current, references: current.references.map((item, itemIndex) => itemIndex === referenceIndex ? { ...item, label: event.target.value } : item) }))} />
                     <input aria-label={`Texto de referencia ${referenceIndex + 1}`} placeholder="Agua: 300 ml" value={reference.text} onChange={event => onDayTypeChange(index, current => ({ ...current, references: current.references.map((item, itemIndex) => itemIndex === referenceIndex ? { ...item, text: event.target.value } : item) }))} />
-                    <button type="button" className="icon-button plan-remove-button" aria-label={`Eliminar referencia ${referenceIndex + 1}`} onClick={() => onDayTypeChange(index, current => ({ ...current, references: current.references.filter((_, itemIndex) => itemIndex !== referenceIndex) }))}><Icon name="trash" size={14} /></button>
+                    <IconButton label={`Eliminar referencia ${referenceIndex + 1}`} className="plan-remove-button" onClick={() => onDayTypeChange(index, current => ({ ...current, references: current.references.filter((_, itemIndex) => itemIndex !== referenceIndex) }))}><Icon name="trash" size={14} /></IconButton>
                   </div>
                 ))}
-                <button type="button" className="text-button plan-add-inline" onClick={() => onDayTypeChange(index, current => ({ ...current, references: [...current.references, { label: '', text: '' } as PlanReference] }))}><Icon name="plus" size={13} /> Agregar nota</button>
+                <Button variant="text" type="button" className="plan-add-inline" onClick={() => onDayTypeChange(index, current => ({ ...current, references: [...current.references, { label: '', text: '' } as PlanReference] }))}><Icon name="plus" size={13} /> Agregar nota</Button>
               </div>
             </details>
           </section>
@@ -951,7 +956,7 @@ function MealsStep({
             <h4>{selectedDayType.name || 'Variante sin nombre'}</h4>
             <p>{weekdaysText(selectedDayType)}</p>
           </div>
-          <button type="button" className="text-button" onClick={onAddSlot}><Icon name="plus" size={14} /> Comida</button>
+          <Button variant="text" type="button" onClick={onAddSlot}><Icon name="plus" size={14} /> Comida</Button>
         </div>
         {selectedDayType.references.length > 0 && (
           <div className="plan-reference-strip">
@@ -969,7 +974,7 @@ function MealsStep({
                   placeholder="Ej. Desayuno"
                   onChange={event => onSlotChange(slotIndex, current => ({ ...current, name: event.target.value }))}
                 />
-                {selectedDayType.slots.length > 1 && <button type="button" className="text-button danger-text" onClick={() => onSlotRemove(slotIndex)}>Eliminar</button>}
+                {selectedDayType.slots.length > 1 && <Button variant="text" type="button" className="danger-text" onClick={() => onSlotRemove(slotIndex)}>Eliminar</Button>}
               </div>
               <div className="plan-dish-summary-list">
                 {slot.dishes.map((dish, dishIndex) => {
@@ -1009,7 +1014,7 @@ function MealsStep({
                 })}
               </div>
               {slot.dishes.length === 0 && <p className="field-hint">Agrega el primer platillo de esta comida.</p>}
-              <button type="button" className="text-button plan-add-inline" onClick={() => onAddDish(slotIndex)}><Icon name="plus" size={13} /> Agregar platillo</button>
+              <Button variant="text" type="button" className="plan-add-inline" onClick={() => onAddDish(slotIndex)}><Icon name="plus" size={13} /> Agregar platillo</Button>
             </section>
           ))}
         </div>
@@ -1046,7 +1051,7 @@ function DishDetailEditor({
           <p className="eyebrow">DETALLES DEL PLATILLO {index + 1}</p>
           <strong>Corrige solo lo que haga falta</strong>
         </div>
-        <button type="button" className="icon-button" aria-label="Cerrar detalles del platillo" onClick={onClose}><Icon name="close" size={16} /></button>
+        <IconButton label="Cerrar detalles del platillo" onClick={onClose}><Icon name="close" size={16} /></IconButton>
       </div>
       <div className="field">
         <label htmlFor={`dish-name-${idPrefix}`}>Nombre del platillo</label>
@@ -1093,14 +1098,14 @@ function DishDetailEditor({
                   </select>
                 </div>
               </div>
-              <button type="button" className="icon-button plan-remove-button" aria-label={`Eliminar ingrediente ${ingredientIndex + 1}`} onClick={() => onIngredientRemove(ingredientIndex)}><Icon name="trash" size={14} /></button>
+              <IconButton label={`Eliminar ingrediente ${ingredientIndex + 1}`} className="plan-remove-button" onClick={() => onIngredientRemove(ingredientIndex)}><Icon name="trash" size={14} /></IconButton>
             </div>
             {ingredient.grams === null && <small className="ingredient-warning"><Icon name="info" size={12} /> Se conserva para tu menú, pero no se suma a la lista de compras.</small>}
           </div>
         ))}
-        <button type="button" className="text-button plan-add-inline" onClick={onAddIngredient}><Icon name="plus" size={13} /> Agregar ingrediente</button>
+        <Button variant="text" type="button" className="plan-add-inline" onClick={onAddIngredient}><Icon name="plus" size={13} /> Agregar ingrediente</Button>
       </div>
-      <button type="button" className="text-button danger-text plan-detail-delete" onClick={onRemove}><Icon name="trash" size={13} /> Eliminar platillo</button>
+      <Button variant="text" type="button" className="danger-text plan-detail-delete" onClick={onRemove}><Icon name="trash" size={13} /> Eliminar platillo</Button>
     </div>
   );
 }
@@ -1130,7 +1135,7 @@ function SupplementsStep({
             <p className="eyebrow">TODOS LOS DÍAS</p>
             <h4>Suplementos</h4>
           </div>
-          <button type="button" className="text-button" onClick={onAddSupplement}><Icon name="plus" size={14} /> Agregar</button>
+          <Button variant="text" type="button" onClick={onAddSupplement}><Icon name="plus" size={14} /> Agregar</Button>
         </div>
         <div className="plan-supplement-list">
           {draft.supplements.map((supplement, index) => (
@@ -1146,7 +1151,7 @@ function SupplementsStep({
                   <input id={`supplement-dose-${index}`} aria-label={`Dosis del suplemento ${index + 1}`} placeholder="Ej. 1 cápsula por día" value={supplement.doseText} onChange={event => onSupplementChange(index, current => ({ ...current, doseText: event.target.value }))} />
                 </div>
               </div>
-              <button type="button" className="icon-button plan-remove-button" aria-label={`Eliminar suplemento ${index + 1}`} onClick={() => onRemoveSupplement(index)}><Icon name="trash" size={15} /></button>
+              <IconButton label={`Eliminar suplemento ${index + 1}`} className="plan-remove-button" onClick={() => onRemoveSupplement(index)}><Icon name="trash" size={15} /></IconButton>
             </div>
           ))}
           {draft.supplements.length === 0 && <p className="field-hint">No se detectaron suplementos. Puedes continuar.</p>}

@@ -3,6 +3,7 @@
 import { useRouter, useSearchParams } from "next/navigation";
 import { Suspense, useState, type FormEvent } from "react";
 import { Icon } from "../components/Icons";
+import { Button, Field, IconButton } from "../components/ui";
 import { createClient } from "../lib/supabase/client";
 
 type PendingAction = "password" | "google" | null;
@@ -113,8 +114,12 @@ function LoginForm() {
         </div>
         <p className="login-subtitle">Inicia sesión para continuar tu checkpoint.</p>
         <form className="login-form" onSubmit={submit} noValidate>
-          <div className="field">
-            <label htmlFor="login-email">Correo</label>
+          <Field
+            label="Correo"
+            htmlFor="login-email"
+            error={emailError}
+            errorId="login-email-error"
+          >
             <input
               id="login-email"
               name="email"
@@ -135,10 +140,13 @@ function LoginForm() {
                 setDismissedCallbackError(true);
               }}
             />
-            {emailError && <span id="login-email-error" className="field-error">{emailError}</span>}
-          </div>
-          <div className="field">
-            <label htmlFor="login-password">Contraseña</label>
+          </Field>
+          <Field
+            label="Contraseña"
+            htmlFor="login-password"
+            error={passwordError}
+            errorId="login-password-error"
+          >
             <div className="password-input">
               <input
                 id="login-password"
@@ -156,22 +164,20 @@ function LoginForm() {
                   setDismissedCallbackError(true);
                 }}
               />
-              <button
-                type="button"
+              <IconButton
                 className="password-toggle"
-                aria-label={showPassword ? "Ocultar contraseña" : "Mostrar contraseña"}
+                label={showPassword ? "Ocultar contraseña" : "Mostrar contraseña"}
                 aria-pressed={showPassword}
                 onClick={() => setShowPassword((visible) => !visible)}
               >
                 <EyeIcon visible={showPassword} />
-              </button>
+              </IconButton>
             </div>
-            {passwordError && <span id="login-password-error" className="field-error">{passwordError}</span>}
-          </div>
+          </Field>
           {displayedError && <p className="login-error" role="alert">{displayedError}</p>}
-          <button type="submit" className="primary-button" disabled={busy}>
+          <Button variant="primary" type="submit" disabled={busy}>
             {pendingAction === "password" ? "Entrando…" : "Entrar"}
-          </button>
+          </Button>
         </form>
         <div className="login-divider" aria-hidden="true"><span>O CONTINÚA CON</span></div>
         <button type="button" className="google-button" disabled={busy} onClick={signInWithGoogle}>

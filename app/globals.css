@@ -505,6 +505,13 @@ textarea { resize: vertical; }
 .secondary-button:hover { border-color: var(--teal); background: #f5faf6; }
 .full-button { width: 100%; }
 .meal-list + .full-button { margin-top: 9px; }
+.ui-surface { padding: 16px; border: 1px solid var(--line); border-radius: 18px; background: var(--surface); }
+.ui-surface-soft { border-color: #cfe2d6; background: #f2f9f3; }
+.ui-badge { display: inline-flex; align-items: center; min-height: 24px; padding: 4px 9px; border-radius: 99px; font-size: 10px; font-weight: 720; line-height: 1; white-space: nowrap; }
+.ui-badge-mint { color: var(--teal-dark); background: var(--mint); }
+.ui-badge-coral { color: #9d503e; background: var(--coral-soft); }
+.ui-badge-gold { color: #78632f; background: var(--gold-soft); }
+.ui-badge-neutral { color: var(--ink-soft); background: var(--surface-soft); }
 .food-guide { display: flex; flex-direction: column; gap: 13px; }
 .plan-entry-teaser { display: flex; align-items: center; gap: 13px; padding: 15px; border: 1px solid #cfe2d6; border-radius: 18px; background: linear-gradient(145deg, #edf7f0, #f8f5e9); }
 .plan-entry-teaser > div { flex: 1; min-width: 0; }
@@ -796,6 +803,11 @@ textarea { resize: vertical; }
 
 .toast { position: fixed; z-index: 50; right: 16px; bottom: calc(89px + env(safe-area-inset-bottom)); left: 16px; display: flex; align-items: center; justify-content: center; gap: 8px; max-width: 390px; margin: auto; padding: 11px 14px; border: 1px solid rgba(52, 121, 111, .2); border-radius: 14px; color: #fff; background: rgba(32, 50, 47, .94); box-shadow: 0 10px 25px rgba(25, 50, 45, .19); font-size: 12px; font-weight: 650; animation: toast-in .24s ease both; }
 .toast-icon { display: grid; place-items: center; width: 20px; height: 20px; border-radius: 50%; color: var(--teal-dark); background: var(--mint); }
+.ui-banner { display: flex; align-items: center; gap: 11px; padding: 13px 14px; border: 1px solid var(--line); border-radius: 16px; color: var(--ink-soft); background: var(--surface); }
+.ui-banner-success { border-color: #d5e7de; color: var(--teal-dark); background: #edf7f0; }
+.ui-banner-warning { border-color: #e7e9d8; color: #6e653f; background: #fcf8e9; }
+.ui-banner-error { border-color: #f0d0c8; color: #a84f3d; background: #fff5f1; }
+.ui-banner-neutral { background: rgba(255, 253, 249, .68); }
 @keyframes toast-in { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: translateY(0); } }
 
 .modal-backdrop { position: fixed; z-index: 40; top: 0; right: 0; left: 0; height: 100dvh; display: flex; align-items: flex-end; justify-content: center; padding: 14px; background: rgba(28, 46, 42, .36); animation: fade-in .18s ease both; }

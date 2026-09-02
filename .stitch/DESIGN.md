@@ -127,6 +127,33 @@ Labels sit above fields. Inputs inherit the system font and ink color, use the s
 
 Checkpoint strips use a horizontal teal progress track with a coral position dot. Focus cards use strong teal fills and a circular completion action. Quest rows, meal rows, week dots, and metric mini-cards create a compact daily dashboard vocabulary.
 
+## 7. Shared React Component Inventory
+
+The shared UI entry point is `app/components/ui`. Components keep the existing CSS class names as their styling contract so feature screens can migrate incrementally without changing the visual language.
+
+### Core Primitives
+
+- `Button` — `variant="primary" | "secondary" | "text"`; accepts native button props and `fullWidth`.
+- `IconButton` — requires an accessible `label`, defaults to a non-submitting button, and accepts native button props.
+- `Field` — renders a labeled field wrapper with optional `htmlFor`, hint, error, and required-state support.
+- `Surface` / `Card` — rounded cream containers with `tone="default" | "soft"`.
+- `Badge` — `mint`, `coral`, `gold`, or `neutral` status labels.
+- `Banner` — `success`, `warning`, `error`, or `neutral` feedback surfaces.
+- `Toast` — status feedback with an optional leading icon.
+
+### Composed Primitives
+
+- `Modal` — accessible dialog shell with Escape and backdrop dismissal, viewport-aware sizing, and the existing sheet animation.
+- `BottomNav` — safe-area-aware five-item navigation surface with active state and `aria-current="page"`.
+
+### Usage Rules
+
+Use a core primitive when the behavior and visual role are reusable across two or more features. Keep domain-specific components such as `QuestRow`, `MealRow`, `MetricLine`, and `QuickAction` close to their feature until their data and interaction contracts are genuinely shared. Pass `className` for feature-specific layout adjustments; do not duplicate the base token, focus, radius, or state styles in feature CSS.
+
+### Accessibility Requirements
+
+Buttons must use an explicit `type` inside forms. Icon-only controls must use `IconButton` with a concise visible-to-assistive-technology label. Fields must associate labels with controls through `htmlFor`/`id`, expose validation through the existing `aria-invalid` and described-by attributes, and keep the teal focus ring visible. Dialogs must retain `role="dialog"`, `aria-modal="true"`, a descriptive label, Escape dismissal, and a keyboard-reachable close control.
+
 ## 5. Layout Principles
 
 ### Grid & Structure

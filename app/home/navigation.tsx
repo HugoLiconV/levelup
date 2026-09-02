@@ -8,6 +8,7 @@ import {
   type ReactNode
 } from 'react';
 import { Icon } from '../components/Icons';
+import { BottomNav, Button, IconButton } from '../components/ui';
 import { classNames, navItems, type Screen } from './shared';
 
 export function MainTabBar({
@@ -17,23 +18,7 @@ export function MainTabBar({
   screen: Screen;
   onNavigate: (screen: Screen) => void;
 }) {
-  return (
-    <nav
-      className="navigation-surface bottom-nav"
-      aria-label="Navegación principal">
-      {navItems.map(item => (
-        <button
-          type="button"
-          key={item.id}
-          className={classNames(screen === item.id && 'active')}
-          onClick={() => onNavigate(item.id)}
-          aria-current={screen === item.id ? 'page' : undefined}>
-          <Icon name={item.icon} size={21} />
-          <span>{item.label}</span>
-        </button>
-      ))}
-    </nav>
-  );
+  return <BottomNav items={navItems} activeId={screen} onChange={id => onNavigate(id as Screen)} />;
 }
 
 export function FlowTopBar({
@@ -47,9 +32,9 @@ export function FlowTopBar({
     <header className="navigation-surface flow-top-bar">
       <span aria-hidden="true" />
       <strong>{title}</strong>
-      <button type="button" onClick={onExit} aria-label={`Salir de ${title}`}>
+      <IconButton label={`Salir de ${title}`} onClick={onExit}>
         <Icon name="close" size={18} />
-      </button>
+      </IconButton>
     </header>
   );
 }
@@ -106,19 +91,20 @@ export function ConfirmFlowExitDialog({
         <p id="flow-exit-description">
           El texto y los cambios de este borrador se perderán.
         </p>
-        <button
+        <Button
           ref={continueButtonRef}
+          variant="primary"
           type="button"
-          className="primary-button"
           onClick={onContinue}>
           Continuar editando
-        </button>
-        <button
+        </Button>
+        <Button
+          variant="text"
           type="button"
           className="flow-discard-button"
           onClick={onDiscard}>
           Salir y descartar
-        </button>
+        </Button>
       </div>
     </div>
   );

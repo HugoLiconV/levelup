@@ -2,6 +2,7 @@
 
 import { useState } from 'react';
 import { Icon } from '../components/Icons';
+import { Toast } from '../components/ui';
 import {
   ExerciseModal,
   IntentionModal,
@@ -240,12 +241,9 @@ export default function LevelUpApp() {
         onChange={event => importData?.(event.target.files?.[0])}
       />
       {!planEntryOpen && notice && (
-        <div className="toast" role="status">
-          <span className="toast-icon">
-            <Icon name="check" size={16} />
-          </span>
+        <Toast icon={<Icon name="check" size={16} />}>
           {notice}
-        </div>
+        </Toast>
       )}
     </div>
   );

@@ -1,7 +1,8 @@
 'use client';
 
-import { useEffect, useState, type FormEvent, type ReactNode } from 'react';
+import { useState, type FormEvent } from 'react';
 import { Icon } from '../components/Icons';
+import { Button, Field, Modal } from '../components/ui';
 import {
   LAB_METRICS,
   MEAL_TAG_GROUPS,
@@ -21,83 +22,6 @@ import {
   mealTypes
 } from './shared';
 import { useMealTagSuggestions } from './useMealTagSuggestions';
-
-export function Modal({
-  title,
-  eyebrow,
-  children,
-  onClose,
-  className
-}: {
-  title: string;
-  eyebrow?: string;
-  children: ReactNode;
-  onClose: () => void;
-  className?: string;
-}) {
-  const [viewportRect, setViewportRect] = useState<{
-    height: number;
-    top: number;
-  } | null>(null);
-
-  useEffect(() => {
-    const handler = (event: KeyboardEvent) => {
-      if (event.key === 'Escape') onClose();
-    };
-    window.addEventListener('keydown', handler);
-    return () => window.removeEventListener('keydown', handler);
-  }, [onClose]);
-  useEffect(() => {
-    const viewport = window.visualViewport;
-    if (!viewport) return;
-    const updateViewportRect = () =>
-      setViewportRect({
-        height: Math.round(viewport.height),
-        top: Math.round(viewport.offsetTop)
-      });
-    updateViewportRect();
-    viewport.addEventListener('resize', updateViewportRect);
-    viewport.addEventListener('scroll', updateViewportRect);
-    return () => {
-      viewport.removeEventListener('resize', updateViewportRect);
-      viewport.removeEventListener('scroll', updateViewportRect);
-    };
-  }, []);
-
-  const backdropStyle = viewportRect
-    ? { height: `${viewportRect.height}px`, top: `${viewportRect.top}px` }
-    : undefined;
-  const panelStyle = viewportRect
-    ? { maxHeight: `${Math.max(0, viewportRect.height - 28)}px` }
-    : undefined;
-  return (
-    <div
-      className="modal-backdrop"
-      style={backdropStyle}
-      role="presentation"
-      onMouseDown={event => {
-        if (event.target === event.currentTarget) onClose();
-      }}>
-      <div
-        className={classNames('modal-panel', className)}
-        style={panelStyle}
-        role="dialog"
-        aria-modal="true"
-        aria-label={title}>
-        <div className="modal-header">
-          <div>
-            {eyebrow && <p className="eyebrow">{eyebrow}</p>}
-            <h2>{title}</h2>
-          </div>
-          <button className="icon-button" onClick={onClose} aria-label="Cerrar">
-            <Icon name="close" size={19} />
-          </button>
-        </div>
-        {children}
-      </div>
-    </div>
-  );
-}
 
 export function MealModal({
   meal,
@@ -167,8 +91,7 @@ export function MealModal({
       eyebrow="MENOS DE 10 SEGUNDOS"
       onClose={onClose}>
       <form className="modal-form" onSubmit={submit}>
-        <div className="field">
-          <label>Tipo de comida</label>
+        <Field label="Tipo de comida">
           <div className="choice-grid meal-choice-grid">
             {mealTypes.map(item => (
               <button
@@ -183,9 +106,8 @@ export function MealModal({
               </button>
             ))}
           </div>
-        </div>
-        <div className="field">
-          <label htmlFor="meal-description">¿Qué comiste?</label>
+        </Field>
+        <Field label="¿Qué comiste?" htmlFor="meal-description">
           <textarea
             id="meal-description"
             value={description}
@@ -195,7 +117,7 @@ export function MealModal({
             rows={3}
             autoFocus
           />
-        </div>
+        </Field>
         <div className="field">
           <div className="meal-tag-heading">
             <label>
@@ -262,15 +184,15 @@ export function MealModal({
           </div>
         </div>
         <div className="modal-actions">
-          <button type="button" className="secondary-button" onClick={onClose}>
+          <Button variant="secondary" type="button" onClick={onClose}>
             Cancelar
-          </button>
-          <button
+          </Button>
+          <Button
+            variant="primary"
             type="submit"
-            className="primary-button"
             disabled={!description.trim()}>
             Guardar comida
-          </button>
+          </Button>
         </div>
       </form>
     </Modal>
@@ -304,8 +226,7 @@ export function ExerciseModal({
   return (
     <Modal title="Registrar actividad" eyebrow="TODO CUENTA" onClose={onClose}>
       <form className="modal-form" onSubmit={submit}>
-        <div className="field">
-          <label>Actividad</label>
+        <Field label="Actividad">
           <div className="exercise-picker">
             {exerciseTypes.map(item => (
               <button
@@ -321,10 +242,9 @@ export function ExerciseModal({
               </button>
             ))}
           </div>
-        </div>
+        </Field>
         <div className="field-row">
-          <div className="field">
-            <label htmlFor="exercise-duration">Duración</label>
+          <Field label="Duración" htmlFor="exercise-duration">
             <div className="input-with-suffix">
               <input
                 id="exercise-duration"
@@ -336,12 +256,9 @@ export function ExerciseModal({
               />
               <span>minutos</span>
             </div>
-          </div>
+          </Field>
         </div>
-        <div className="field">
-          <label htmlFor="exercise-note">
-            Nota <small>(opcional)</small>
-          </label>
+        <Field label={<>Nota <small>(opcional)</small></>} htmlFor="exercise-note">
           <input
             id="exercise-note"
             type="text"
@@ -349,14 +266,14 @@ export function ExerciseModal({
             onChange={event => setNote(event.target.value)}
             placeholder="¿Cómo se sintió?"
           />
-        </div>
+        </Field>
         <div className="modal-actions">
-          <button type="button" className="secondary-button" onClick={onClose}>
+          <Button variant="secondary" type="button" onClick={onClose}>
             Cancelar
-          </button>
-          <button type="submit" className="primary-button">
+          </Button>
+          <Button variant="primary" type="submit">
             Guardar actividad
-          </button>
+          </Button>
         </div>
       </form>
     </Modal>
@@ -405,15 +322,14 @@ export function LabsModal({
           Guarda los valores tal como aparezcan en tus resultados. Tu médico
           interpreta el significado.
         </p>
-        <div className="field">
-          <label htmlFor="lab-date">Fecha de toma</label>
+        <Field label="Fecha de toma" htmlFor="lab-date">
           <input
             id="lab-date"
             type="date"
             value={date}
             onChange={event => setDate(event.target.value)}
           />
-        </div>
+        </Field>
         <div className="lab-input-grid">
           {LAB_METRICS.map(metric => (
             <label className="lab-input" key={metric.id}>
@@ -440,12 +356,12 @@ export function LabsModal({
           ))}
         </div>
         <div className="modal-actions">
-          <button type="button" className="secondary-button" onClick={onClose}>
+          <Button variant="secondary" type="button" onClick={onClose}>
             Cancelar
-          </button>
-          <button type="submit" className="primary-button">
+          </Button>
+          <Button variant="primary" type="submit">
             Guardar valores
-          </button>
+          </Button>
         </div>
       </form>
     </Modal>
@@ -488,12 +404,12 @@ export function IntentionModal({
           />
         </div>
         <div className="modal-actions">
-          <button type="button" className="secondary-button" onClick={onClose}>
+          <Button variant="secondary" type="button" onClick={onClose}>
             Cancelar
-          </button>
-          <button type="submit" className="primary-button">
+          </Button>
+          <Button variant="primary" type="submit">
             Guardar regla
-          </button>
+          </Button>
         </div>
       </form>
     </Modal>
